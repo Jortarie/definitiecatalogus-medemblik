@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Definitiecatalogus — Sociaal Domein | Gemeente Medemblik</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+:root{
+  --s:#005496;--n:#002E56;--g:#8DC63F;--zb:#16BECF;--zg:#21B685;--or:#F26722;
+  --lg:#F2F5F9;--bd:#DDE3EC;--w:#fff;--sub:#4A6180;
+}
+body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:var(--lg);color:var(--n);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Header */
+.hdr{height:52px;flex:0 0 52px;background:var(--n);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+.hdr-l{display:flex;align-items:center;gap:14px;}
+.hdr-sep{width:1px;height:24px;background:rgba(255,255,255,.2);}
+.t1{color:#fff;font-size:.85rem;font-weight:700;}
+.t2{color:var(--zb);font-size:.64rem;margin-top:1px;}
+.hdr-badge{background:rgba(22,190,207,.15);color:#7EEAF3;border:1px solid rgba(22,190,207,.3);padding:4px 12px;border-radius:16px;font-size:.64rem;font-weight:700;}
+
+/* Toolbar */
+.toolbar{height:46px;flex:0 0 46px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:10px;}
+.search-wrap{position:relative;flex:1;max-width:340px;}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--sub);}
+#searchInput{width:100%;font-family:inherit;font-size:.72rem;border:1.5px solid var(--bd);border-radius:20px;padding:6px 12px 6px 34px;outline:none;color:var(--n);background:var(--lg);transition:border .15s;}
+#searchInput:focus{border-color:var(--s);background:var(--w);}
+.fi-sel{font-family:inherit;font-size:.7rem;border:1.5px solid var(--bd);border-radius:16px;padding:5px 10px;outline:none;color:var(--n);background:var(--w);cursor:pointer;}
+.fi-sel:focus{border-color:var(--s);}
+.tb-sep{width:1px;height:20px;background:var(--bd);}
+.tb-count{font-size:.68rem;color:var(--sub);margin-left:auto;}
+.btn-add{font-family:inherit;font-size:.7rem;font-weight:700;background:var(--s);color:#fff;border:none;border-radius:16px;padding:6px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;}
+.btn-add:hover{background:var(--n);}
+.btn-add svg{flex-shrink:0;}
+
+/* Main layout */
+.main{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 380px;gap:0;}
+
+/* Table panel */
+.tbl-panel{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--bd);}
+.tbl-wrap{flex:1;overflow-y:auto;min-height:0;}
+.tbl-wrap::-webkit-scrollbar{width:4px;}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+table{width:100%;border-collapse:collapse;font-size:.72rem;}
+thead{position:sticky;top:0;z-index:5;}
+thead th{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);padding:8px 12px;border-bottom:2px solid var(--bd);text-align:left;background:var(--w);white-space:nowrap;}
+thead th:first-child{width:72px;}
+tbody tr{cursor:pointer;transition:background .1s;}
+tbody tr:hover td{background:#EEF5FF;}
+tbody tr.selected td{background:#E3EFF9;border-left:3px solid var(--s);}
+tbody tr.selected td:first-child{padding-left:9px;}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;color:var(--n);}
+.id-cell{font-size:.65rem;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums;}
+.term-cell{font-weight:600;color:var(--n);}
+.def-preview{font-size:.66rem;color:var(--sub);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:320px;}
+.cat-cell{white-space:nowrap;}
+
+/* Status badges */
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:700;gap:4px;white-space:nowrap;}
+.bdg::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.bdg-vastgesteld{background:#E1F5EE;color:#0B6E49;}.bdg-vastgesteld::before{background:#0B6E49;}
+.bdg-concept{background:#FAEEDA;color:#854F0B;}.bdg-concept::before{background:#EF9F27;}
+.bdg-review{background:#E6F1FB;color:var(--s);}.bdg-review::before{background:var(--s);}
+.bdg-vervallen{background:#FAECE7;color:#993C1D;}.bdg-vervallen::before{background:#E24B4A;}
+.bdg-leeg{background:#F2F5F9;color:var(--sub);}.bdg-leeg::before{background:var(--bd);}
+
+/* Cat pills */
+.cat-pill{display:inline-flex;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:600;}
+.cat-wmo{background:#E6F1FB;color:#185FA5;}
+.cat-jeugd{background:#E1F5EE;color:#0B6E49;}
+.cat-sd{background:#EDE9FC;color:#534AB7;}
+.cat-toegang{background:#FFF0E6;color:#993C1D;}
+.cat-instuit{background:#E0F7F9;color:#0C6E78;}
+.cat-other{background:#F2F5F9;color:var(--sub);}
+
+/* Detail panel */
+.detail-panel{display:flex;flex-direction:column;min-height:0;background:var(--w);}
+.detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--sub);}
+.detail-empty svg{opacity:.3;}
+.detail-empty p{font-size:.75rem;}
+.detail-scroll{flex:1;overflow-y:auto;min-height:0;padding:20px;}
+.detail-scroll::-webkit-scrollbar{width:4px;}
+.detail-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bd);}
+.detail-id{font-size:.65rem;font-weight:700;color:var(--sub);margin-bottom:4px;}
+.detail-term{font-size:1.1rem;font-weight:700;color:var(--n);line-height:1.2;}
+.detail-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.detail-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-icon{border:1.5px solid var(--bd);background:var(--w);border-radius:8px;padding:6px;cursor:pointer;color:var(--sub);transition:all .15s;display:flex;}
+.btn-icon:hover{border-color:var(--s);color:var(--s);}
+.btn-icon.danger:hover{border-color:#E24B4A;color:#E24B4A;}
+.section-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--sub);margin-bottom:6px;}
+.detail-section{margin-bottom:16px;}
+.detail-text{font-size:.78rem;line-height:1.65;color:var(--n);}
+.detail-empty-field{font-size:.75rem;color:var(--bd);font-style:italic;}
+.data-fields-wrap{display:flex;flex-wrap:wrap;gap:6px;}
+.data-field-chip{background:var(--lg);border:1px solid var(--bd);border-radius:8px;padding:3px 10px;font-size:.65rem;color:var(--n);}
+.detail-meta{background:var(--lg);border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.meta-item{}
+.meta-key{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin-bottom:2px;}
+.meta-val{font-size:.72rem;font-weight:600;color:var(--n);}
+
+/* Edit panel */
+.edit-panel{display:none;flex-direction:column;min-height:0;}
+.edit-panel.open{display:flex;}
+.edit-header{padding:16px 20px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.edit-title{font-size:.85rem;font-weight:700;color:var(--n);}
+.edit-scroll{flex:1;overflow-y:auto;min-height:0;padding:16px 20px;}
+.edit-scroll::-webkit-scrollbar{width:4px;}
+.edit-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin-bottom:5px;display:block;}
+.form-input,.form-textarea,.form-select{font-family:inherit;font-size:.76rem;width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:8px 10px;outline:none;color:var(--n);background:var(--w);transition:border .15s;resize:vertical;}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--s);}
+.form-textarea{min-height:70px;line-height:1.5;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.edit-footer{padding:12px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0;}
+.btn-save{font-family:inherit;font-size:.72rem;font-weight:700;background:var(--s);color:#fff;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;flex:1;transition:background .15s;}
+.btn-save:hover{background:var(--n);}
+.btn-cancel{font-family:inherit;font-size:.72rem;font-weight:600;background:var(--w);color:var(--sub);border:1.5px solid var(--bd);border-radius:8px;padding:8px 16px;cursor:pointer;transition:all .15s;}
+.btn-cancel:hover{border-color:var(--s);color:var(--s);}
+
+/* Footer */
+.ftr{height:26px;flex:0 0 26px;background:var(--n);display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+.ftr span{font-size:.6rem;color:rgba(255,255,255,.45);}
+
+/* Empty state */
+.no-results{padding:40px;text-align:center;color:var(--sub);font-size:.78rem;}
+
+/* Tooltip */
+.tooltip{position:fixed;background:var(--n);color:#fff;padding:4px 10px;border-radius:6px;font-size:.65rem;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;}
+
+/* Beheer modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,46,86,.45);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--w);border-radius:14px;width:520px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,46,86,.18);}
+.modal-hdr{padding:16px 20px 0;flex-shrink:0;}
+.modal-title{font-size:.9rem;font-weight:700;color:var(--n);display:flex;align-items:center;justify-content:space-between;}
+.modal-tabs{display:flex;gap:2px;margin-top:12px;border-bottom:2px solid var(--bd);}
+.modal-tab{font-family:inherit;font-size:.72rem;font-weight:600;color:var(--sub);background:none;border:none;padding:7px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.modal-tab.active{color:var(--s);border-bottom-color:var(--s);}
+.modal-tab:hover:not(.active){color:var(--n);}
+.modal-tab-count{font-size:.58rem;background:var(--lg);border:1px solid var(--bd);border-radius:8px;padding:1px 5px;margin-left:5px;color:var(--sub);font-weight:700;}
+.modal-body{flex:1;overflow-y:auto;padding:14px 20px;min-height:0;}
+.modal-body::-webkit-scrollbar{width:4px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+.modal-footer{padding:11px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0;}
+.item-list{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.item-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--lg);border-radius:8px;border:1px solid var(--bd);}
+.color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.item-name-input{font-family:inherit;font-size:.76rem;flex:1;border:none;background:transparent;outline:none;color:var(--n);font-weight:600;}
+.item-name-input:focus{background:var(--w);border-radius:4px;padding:2px 4px;}
+.color-sel{font-family:inherit;font-size:.68rem;border:1.5px solid var(--bd);border-radius:6px;padding:3px 6px;outline:none;background:var(--w);color:var(--n);cursor:pointer;width:110px;}
+.color-sel:focus{border-color:var(--s);}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.item-count{font-size:.6rem;background:var(--lg);border:1px solid var(--bd);border-radius:8px;padding:1px 5px;color:var(--sub);font-weight:700;flex-shrink:0;}
+.btn-del-item{border:1.5px solid var(--bd);background:var(--w);border-radius:6px;padding:4px 6px;cursor:pointer;color:var(--sub);display:flex;transition:all .15s;flex-shrink:0;}
+.btn-del-item:hover{border-color:#E24B4A;color:#E24B4A;}
+.add-row{display:flex;gap:8px;align-items:center;}
+.add-input{font-family:inherit;font-size:.76rem;flex:1;border:1.5px solid var(--bd);border-radius:8px;padding:7px 10px;outline:none;color:var(--n);background:var(--w);transition:border .15s;}
+.add-input:focus{border-color:var(--s);}
+.btn-add-item{font-family:inherit;font-size:.7rem;font-weight:700;background:var(--s);color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn-add-item:hover{background:var(--n);}
+.btn-settings{border:1.5px solid var(--bd);background:var(--w);border-radius:16px;padding:5px 10px;cursor:pointer;color:var(--sub);display:flex;align-items:center;gap:5px;font-family:inherit;font-size:.68rem;font-weight:600;transition:all .15s;}
+.btn-settings:hover{border-color:var(--s);color:var(--s);}
+.status-preview{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:700;}
+.section-hint{font-size:.66rem;color:var(--sub);margin-bottom:10px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <img src="https://www.medemblik.nl/fileadmin/user_upload/medemblik-logo.svg"
+         style="height:30px;filter:brightness(0) invert(1)"
+         onerror="this.style.display='none'">
+    <div class="hdr-sep"></div>
+    <div>
+      <div class="t1">Definitiecatalogus — Sociaal Domein</div>
+      <div class="t2">Gegevenswoordenboek · Gemeente Medemblik</div>
+    </div>
+  </div>
+  <div class="hdr-badge">📖 Gegevenswoordenboek</div>
+</div>
+
+<div class="toolbar">
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Zoek op term, definitie, dataveld…">
+  </div>
+  <select class="fi-sel" id="filterCat"><option value="">Alle categorieën</option></select>
+  <select class="fi-sel" id="filterStatus"><option value="">Alle statussen</option></select>
+  <select class="fi-sel" id="filterTeam"><option value="">Alle teams</option></select>
+  <div class="tb-sep"></div>
+  <span class="tb-count" id="countLabel">— begrippen</span>
+  <button class="btn-settings" onclick="openCatModal()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Categorieën
+  </button>
+  <button class="btn-add" onclick="openNew()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Nieuw begrip
+  </button>
+</div>
+
+<!-- Beheer modal (Categorieën / Teams / Statussen) -->
+<div class="modal-overlay" id="catModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">
+        <span>Beheer</span>
+        <button class="btn-icon" onclick="closeCatModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-cat" onclick="switchTab('cat')">Categorieën <span class="modal-tab-count" id="tc-cat">0</span></button>
+        <button class="modal-tab" id="tab-team" onclick="switchTab('team')">Teams <span class="modal-tab-count" id="tc-team">0</span></button>
+        <button class="modal-tab" id="tab-status" onclick="switchTab('status')">Statussen <span class="modal-tab-count" id="tc-status">0</span></button>
+      </div>
+    </div>
+    <div class="modal-body">
+
+      <!-- Categorieën tab -->
+      <div id="pane-cat">
+        <p class="section-hint">Hernoem, voeg toe of verwijder categorieën. Het getal toont het aantal gekoppelde begrippen.</p>
+        <div class="item-list" id="catList"></div>
+        <div class="add-row">
+          <input class="add-input" id="newCatName" placeholder="Nieuwe categorie…" onkeydown="if(event.key==='Enter') addCatRow()">
+          <select class="color-sel" id="newCatColor">
+            <option value="blue">Blauw</option>
+            <option value="green">Groen</option>
+            <option value="purple">Paars</option>
+            <option value="orange">Oranje</option>
+            <option value="teal">Teal</option>
+            <option value="red">Rood</option>
+            <option value="gray">Grijs</option>
+          </select>
+          <button class="btn-add-item" onclick="addCatRow()">+ Toevoegen</button>
+        </div>
+      </div>
+
+      <!-- Teams tab -->
+      <div id="pane-team" style="display:none;">
+        <p class="section-hint">Hernoem of verwijder teams. Een hernoeming wordt automatisch doorgevoerd in alle begrippen.</p>
+        <div class="item-list" id="teamList"></div>
+        <div class="add-row">
+          <input class="add-input" id="newTeamName" placeholder="Nieuw team…" onkeydown="if(event.key==='Enter') addTeamRow()">
+          <button class="btn-add-item" onclick="addTeamRow()">+ Toevoegen</button>
+        </div>
+      </div>
+
+      <!-- Statussen tab -->
+      <div id="pane-status" style="display:none;">
+        <p class="section-hint">Beheer de beschikbare statussen en hun kleur. De kleur is ook zichtbaar als badge in de tabel.</p>
+        <div class="item-list" id="statusList"></div>
+        <div class="add-row">
+          <input class="add-input" id="newStatusName" placeholder="Nieuwe status…" onkeydown="if(event.key==='Enter') addStatusRow()">
+          <select class="color-sel" id="newStatusColor">
+            <option value="green">Groen (vastgesteld)</option>
+            <option value="orange">Oranje (concept)</option>
+            <option value="blue">Blauw (review)</option>
+            <option value="red">Rood (vervallen)</option>
+            <option value="gray">Grijs</option>
+          </select>
+          <button class="btn-add-item" onclick="addStatusRow()">+ Toevoegen</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeCatModal()" style="flex:1;">Annuleren</button>
+      <button class="btn-save" onclick="saveAll()">💾 Alles opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tbl-panel">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Term</th>
+            <th>Categorie</th>
+            <th>Team</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="noResults" class="no-results" style="display:none;">Geen begrippen gevonden voor deze filters.</div>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty" id="detailEmpty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" color="#005496"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <p>Selecteer een begrip om details te zien</p>
+    </div>
+    <div id="detailContent" style="display:none;flex:1;display:none;flex-direction:column;min-height:0;">
+      <div class="detail-scroll">
+        <div class="detail-header">
+          <div style="flex:1;">
+            <div class="detail-id" id="dId"></div>
+            <div class="detail-term" id="dTerm"></div>
+            <div class="detail-badges">
+              <span id="dCatBadge"></span>
+              <span id="dStatusBadge"></span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn-icon" onclick="openEdit(currentId)" title="Bewerken">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon danger" onclick="deleteEntry(currentId)" title="Verwijderen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-label">Definitie</div>
+          <div class="detail-text" id="dDef"></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-label">Business context</div>
+          <div class="detail-text" id="dCtx"></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-label">Benodigde datavelden</div>
+          <div class="data-fields-wrap" id="dFields"></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-label">Opmerkingen</div>
+          <div class="detail-text" id="dNotes"></div>
+        </div>
+
+        <div class="detail-meta">
+          <div class="meta-item">
+            <div class="meta-key">Verantwoordelijk team</div>
+            <div class="meta-val" id="dTeam"></div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Datum vastgesteld</div>
+            <div class="meta-val" id="dDate"></div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Categorie</div>
+            <div class="meta-val" id="dCat"></div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Status</div>
+            <div class="meta-val" id="dStatus"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit panel overlays detail -->
+    <div class="edit-panel" id="editPanel">
+      <div class="edit-header">
+        <div class="edit-title" id="editTitle">Begrip bewerken</div>
+        <button class="btn-icon" onclick="closeEdit()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="edit-scroll">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ID</label>
+            <input class="form-input" id="eId" placeholder="D-001" style="background:var(--lg);" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Term *</label>
+            <input class="form-input" id="eTerm" placeholder="Naam van het begrip">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Definitie</label>
+          <textarea class="form-textarea" id="eDef" placeholder="De formele, volledige omschrijving van het begrip…" style="min-height:90px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Business context</label>
+          <textarea class="form-textarea" id="eCtx" placeholder="In welk proces of systeem speelt dit begrip een rol?"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Benodigde datavelden <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.65rem;">(komma-gescheiden)</span></label>
+          <textarea class="form-textarea" id="eFields" placeholder="bijv. BSN, startdatum, einddatum, productcode"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Categorie</label>
+            <select class="form-select" id="eCat">
+              <option value="">— kies —</option>
+              <option value="WMO">WMO</option>
+              <option value="Jeugd">Jeugd</option>
+              <option value="Jeugd/WMO">Jeugd/WMO</option>
+              <option value="Sociaal Domein">Sociaal Domein</option>
+              <option value="Toegang">Toegang</option>
+              <option value="In/Uitstroom">In/Uitstroom</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="eStatus"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Verantwoordelijk team</label>
+          <select class="form-select" id="eTeam"><option value="">— kies —</option></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Datum vastgesteld</label>
+            <input class="form-input" id="eDate" type="text" placeholder="DD-MM-JJJJ">
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;">
+            &nbsp;
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Opmerkingen</label>
+          <textarea class="form-textarea" id="eNotes" placeholder="Vrij tekstveld voor aantekeningen of openstaande vragen…"></textarea>
+        </div>
+      </div>
+      <div class="edit-footer">
+        <button class="btn-cancel" onclick="closeEdit()">Annuleren</button>
+        <button class="btn-save" onclick="saveEntry()">💾 Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ftr">
+  <span>Gemeente Medemblik · www.medemblik.nl · Sociaal Domein</span>
+  <span id="ftrCount"></span>
+  <span id="ftrDate"></span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const STORAGE_KEY = 'medemblik_definitiecatalogus_v1';
+
+const DEFAULT_DATA = [
+  {id:"D-001",term:"Instroom",def:"",ctx:"",fields:"",cat:"In/Uitstroom",team:"Beleids- & Datateam Jeugd",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-002",term:"Uitstroom",def:"Het aantal cliënten dat binnen de gegeven periode stopt met het gebruiken van een dienst of product. Dit geldt voor zowel specialistische, als basisondersteuning.",ctx:"",fields:"",cat:"In/Uitstroom",team:"Beleids- & Datateam WMO",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-003",term:"Doorlooptijd",def:"",ctx:"",fields:"",cat:"WMO",team:"Contractbeheer & Inkoop",status:"Vastgesteld",date:"15-03-2024",notes:""},
+  {id:"D-004",term:"Uitstroommoment",def:"",ctx:"",fields:"",cat:"Jeugd",team:"Toegang & Wijkteams",status:"Concept",date:"—",notes:"Definitie in review bij wijkteams"},
+  {id:"D-005",term:"Toewijzing Jeugd",def:"Wonen in een accommodatie van een instelling met daarbij behorende toezicht en begeleiding, gericht op herstel en re-integratie in de samenleving.",ctx:"Specifieke WMO-voorziening voor mensen met psychische problematiek; aparte financieringsstromen en verantwoording.",fields:"Instelling, capaciteitstype, indicatiebesluit, verblijfsduur, financieringsvorm",cat:"WMO",team:"Beleids- & Datateam WMO",status:"Vastgesteld",date:"01-06-2023",notes:""},
+  {id:"D-006",term:"Doorlooptijd Jeugd",def:"Het vermogen van een persoon en diens sociale netwerk om zelfstandig problemen op te lossen, zonder professionele ondersteuning.",ctx:"Uitgangspunt bij de keukentafelgesprekken en de afweging of een maatwerkvoorziening noodzakelijk is.",fields:"Vragenlijst eigen kracht, mantelzorgbeschikbaarheid, sociaal netwerkscore",cat:"Sociaal Domein",team:"Toegang & Wijkteams",status:"Vastgesteld",date:"01-09-2023",notes:""},
+  {id:"D-007",term:"Enkelvoudige hulpvraag",def:"Een hulpvraag die betrekking heeft op één specifiek domein en waarvoor één type voorziening of interventie volstaat.",ctx:"Gebruikt bij triage in het toegangsproces om te bepalen welk loket of welk team de vraag oppakt.",fields:"Domeincode, vraagtype, toewijzend loket, datum melding",cat:"Toegang",team:"Toegang & Wijkteams",status:"Concept",date:"15-02-2024",notes:""},
+  {id:"D-008",term:"Meervoudige problematiek",def:"Een situatie waarbij een cliënt of gezin te maken heeft met problemen op twee of meer levensdomeinen tegelijk.",ctx:"Triggert inzet van een casemanager of regisseur; relevant voor de monitor multiprobleem-gezinnen.",fields:"Actieve domeinen, betrokken aanbieders, regisseur BSN, coördinatieafspraken",cat:"Sociaal Domein",team:"Beleids- & Datateam Jeugd",status:"Concept",date:"—",notes:"Afstemming nodig met WMO-team"},
+  {id:"D-009",term:"Verwijzer",def:"Een persoon of organisatie die een burger doorverwijst naar jeugdhulp of WMO-ondersteuning, zoals een huisarts, rechter of wijkteam.",ctx:"Bepaalt de ingangsroute en heeft gevolgen voor de financiering en het bijbehorende registratieproces.",fields:"Verwijzertype, verwijzercode, organisatie, datum verwijzing, verwijsbrief aanwezig (J/N)",cat:"Jeugd",team:"Beleids- & Datateam Jeugd",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-010",term:"Verwijzer GI",def:"",ctx:"Gemeente mag de noodzaak tot jeugdhulp niet onderzoeken, dit bepaalt de GI. Gemeente geeft geen beschikking af.",fields:"Type verwijzer, Zaaktype",cat:"Jeugd",team:"Team Jeugd",status:"Vastgesteld",date:"01-03-2023",notes:""},
+  {id:"D-011",term:"Zorg in natura (ZIN)",def:"Een voorziening waarbij de gemeente de zorg of ondersteuning rechtstreeks inkoopt bij een gecontracteerde aanbieder.",ctx:"Meest voorkomende leveringsvorm; aansturing via contracten en productcodes.",fields:"Leveringsvorm",cat:"WMO",team:"Contractbeheer & Inkoop",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-012",term:"Keukentafelgesprek",def:"Een gesprek tussen een gemeentelijke consulent en de hulpvragende burger (en eventueel diens netwerk) om de ondersteuningsbehoefte in kaart te brengen.",ctx:"Startpunt van de formele WMO-procedure; gespreksverslag vormt basis voor het indicatiebesluit.",fields:"Datum gesprek, consulent-ID, aanwezigen, gespreksverslag, vervolgactie",cat:"WMO",team:"Toegang & Wijkteams",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-013",term:"Indicatiebesluit",def:"Een formeel besluit van de gemeente waarin wordt vastgelegd welke ondersteuning een cliënt ontvangt, voor welke periode en onder welke voorwaarden.",ctx:"Juridisch bindend document; basis voor de toewijzing aan een aanbieder en de bekostiging.",fields:"Besluitdatum, ingangsdatum, einddatum, productcode, volume, grondslag, bezwaartermijn",cat:"WMO",team:"Beleids- & Datateam WMO",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-014",term:"Sociale basis",def:"Het geheel van algemene, vrij toegankelijke voorzieningen en activiteiten in de wijk die bijdragen aan participatie en zelfredzaamheid.",ctx:"Wordt ingezet vóór of naast maatwerkvoorzieningen; relevant voor de monitor preventie.",fields:"Voorzieningtype, locatie, doelgroep, capaciteit, subsidie J/N",cat:"Sociaal Domein",team:"Beleids- & Datateam WMO",status:"Concept",date:"—",notes:""},
+  {id:"D-015",term:"Uitstroom (traject)",def:"Het beëindigen van een zorg- of ondersteuningstraject, al dan niet na het bereiken van de doelstelling.",ctx:"Kernmaat voor effectiviteitsmeting; reden van uitstroom bepaalt de kwalificatie (positief/negatief).",fields:"Einddatum, reden uitstroom, doelrealisatie (J/N), doorstroom naar andere voorziening",cat:"Sociaal Domein",team:"Beleids- & Datateam Jeugd",status:"Vastgesteld",date:"15-05-2024",notes:""},
+  {id:"D-016",term:"Wachttijd",def:"De periode tussen de datum van toewijzing van een voorziening en de daadwerkelijke start van de levering.",ctx:"Kwaliteitsindicator; wettelijke norm is maximaal 6 weken voor jeugdhulp.",fields:"Toewijzingsdatum, startdatum levering, wachttijd in dagen, aanbieder, productcode",cat:"Jeugd",team:"Contractbeheer & Inkoop",status:"Vastgesteld",date:"01-04-2024",notes:"Norm: max. 42 dagen"},
+  {id:"D-017",term:"Beschikkingsduur",def:"De periode waarvoor een indicatiebesluit geldig is en waarbinnen de toegekende voorziening geleverd mag worden.",ctx:"Stuurt op tijdige herindicatie en voorkomt ongeautoriseerde levering buiten de beschikkingsperiode.",fields:"Startdatum, einddatum, totaal aantal dagen, herindicatiedatum, aanbieder",cat:"WMO",team:"Beleids- & Datateam WMO",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-018",term:"Mantelzorger",def:"Een persoon uit de sociale omgeving van een cliënt die onbetaald langdurige zorg of ondersteuning biedt.",ctx:"Relevant bij de beoordeling van eigen kracht; gemeente heeft wettelijke taak voor ondersteuning van mantelzorgers.",fields:"Relatie tot cliënt, leeftijd mantelzorger, uren zorg per week, overbelastingssignaal J/N",cat:"WMO",team:"Toegang & Wijkteams",status:"Vastgesteld",date:"01-06-2023",notes:""},
+  {id:"D-019",term:"Resultaatgebied",def:"Een afgebakend domein van het dagelijks leven waarop de ondersteuning gericht is, conform het gemeentelijke resultatenmodel.",ctx:"Structureert de rapportage over outcome en doelbereik; koppelt aan het gemeentelijk beleidskader.",fields:"Resultaatgebied-code, omschrijving, gekoppelde producten, meeteenheid",cat:"Sociaal Domein",team:"Beleids- & Datateam WMO",status:"Concept",date:"—",notes:"Afstemming met beleid vereist"},
+  {id:"D-020",term:"Aanbodcode (productcode)",def:"Een unieke code die een specifiek zorg- of ondersteuningsproduct identificeert binnen de gemeentelijke productencatalogus.",ctx:"Basis voor de informatiestandaard iWmo/iJw; noodzakelijk voor correcte facturatie en verantwoording.",fields:"Productcode, productnaam, wet (WMO/Jeugd), eenheid, tarief, contractperiode",cat:"Sociaal Domein",team:"Contractbeheer & Inkoop",status:"Vastgesteld",date:"01-01-2024",notes:"Conform iStandaarden"},
+  {id:"D-021",term:"Algemene voorzieningen (voorveld)",def:"Algemene voorzieningen zijn voorzieningen binnen de Wmo, toegankelijk zonder beschikking van de gemeente. Het gaat hier om de voorzieningen die voor iedereen toegankelijk zijn. Bijvoorbeeld de buurt- en clubhuizen, sociaal-cultureel werk, sociale samenhang, welzijnsactiviteiten etc.",ctx:"",fields:"",cat:"WMO",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-022",term:"Beëindigde arrangementen",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-023",term:"Cliënten met voorzieningen",def:"Het aantal natuurlijke personen die ondersteuning ontvangen, of gebruik hebben gemaakt van maatwerkarrangementen in het kader van het sociaal domein (WMO, Jeugdwet, Participatiewet).",ctx:"",fields:"",cat:"Sociaal Domein",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-024",term:"Generieke toewijzing",def:"Toewijzing waarbij zowel de productcategorie als de productcode leeg zijn. De aanbieder mag alle gecontracteerde producten leveren. Bij een generieke toewijzing wordt altijd een maximaal budget meegegeven. Omvang mag niet worden ingevuld.",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-025",term:"Jeugdzorg",def:"Het geheel van jeugdhulp, jeugdbescherming en jeugdreclassering, dat onder verantwoordelijkheid van de gemeente wordt uitgevoerd volgens de Jeugdwet.",ctx:"",fields:"",cat:"Jeugd",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-026",term:"Jeugdhulp",def:"Hulp en zorg zoals deze bedoeld en beschreven is in de jeugdwet. Het betreft hulp en zorg aan jongeren en hun ouders bij psychische, psychosociale en/of gedragsproblemen, een verstandelijke beperking van de jongere, of opvoedingsproblemen van de ouders. Onderscheid wordt gemaakt in jeugdhulp met verblijf en jeugdhulp zonder verblijf.",ctx:"",fields:"",cat:"Jeugd",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-027",term:"Jeugdhulp met verblijf",def:"In het geval van Jeugdhulp met verblijf verblijft de jeugdige elders. De jeugdige slaapt formeel elders, niet zijnde thuis, in het eigen gezin. Dit betekent dat het hier alleen om de verblijfsvormen gaat waarbij er sprake is van een overnachting. Dagbehandeling valt daarom onder de categorie 'jeugdhulp zonder verblijf'. Verblijf in logeerhuizen, alleen tijdens weekenden of juist door de weeks vallen onder jeugdhulp met verblijf.",ctx:"",fields:"",cat:"Jeugd",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-028",term:"Jeugdreclassering",def:"Jeugdreclassering is begeleiding en controle voor jongeren van 12 tot 18 jaar die met politie en justitie in aanraking zijn geweest. In sommige gevallen geldt dit ook voor jongvolwassenen tot 23 jaar. De uitvoering ligt bij gecertificeerde instellingen.",ctx:"",fields:"",cat:"Jeugd",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-029",term:"Kinderen in uitkeringsgezinnen",def:"Kinderen tot 18 jaar die in een gezin leven dat van een bijstandsuitkering moet rondkomen. Een bijstandshuishouden is een huishouden waarvan minimaal één lid een bijstandsuitkering ontvangt.",ctx:"",fields:"",cat:"Sociaal Domein",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-030",term:"Kortdurend Verblijf",def:"Wmo voorziening uit de categorie ondersteuning thuis. Kortdurend verblijf is een van de voorzieningen die kan worden toegekend ter ondersteuning van mantelzorgers. Ter voorkoming dat zij overbelast worden en de thuissituatie onleefbaar wordt.",ctx:"",fields:"",cat:"WMO",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-031",term:"WMO Maatwerkarrangement landelijk niveau",def:"Een Wmo-maatwerkarrangement is ondersteuning op maat die is afgestemd op de persoonlijke situatie en behoeften van een cliënt; binnen de Gemeentelijke Monitor Sociaal Domein worden vijf typen onderscheiden: hulp bij het huishouden, ondersteuning thuis, hulpmiddelen en diensten, verblijf en opvang, en overig.",ctx:"",fields:"",cat:"WMO",team:"",status:"Vastgesteld",date:"—",notes:""},
+  {id:"D-032",term:"Zorginstelling (Wlz)",def:"Bij zorg vanuit de Wet langdurige zorg (Wlz) gaat het om zorg met verblijf in een instelling. Denk hierbij bijvoorbeeld aan verpleeg- of verzorgingshuis of een woonvorm in de gehandicaptenzorg.",ctx:"",fields:"",cat:"Sociaal Domein",team:"",status:"Vastgesteld",date:"—",notes:""},
+  {id:"D-033",term:"Zelfstandig wonend",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-034",term:"Voorziening",def:"De feitelijke ondersteuning die geleverd wordt aan een cliënt.",ctx:"",fields:"",cat:"WMO",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-035",term:"Beschikking / Indicatie",def:"Een beschikking is het juridische besluit van de gemeente waarin staat of je recht hebt op zorg en welke.",ctx:"",fields:"",cat:"WMO",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-036",term:"Toewijzing",def:"Toewijzing is de administratieve opdracht of het contract waarmee de gemeente de zorgaanbieder betaalt om die specifieke zorg aan jou te leveren.",ctx:"",fields:"",cat:"WMO",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-037",term:"Beschikte Voorzieningen",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-038",term:"PGB",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-039",term:"Traject",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-040",term:"Uniek Huishouden",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-041",term:"Actieve cliënten",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-042",term:"Verlenging",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-043",term:"Wachtlijst",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-044",term:"Caseload",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-045",term:"Hergebruik van zorg",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-046",term:"Afronding Zorg",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-047",term:"Maatwerkcontract (Gemeente Medemblik)",def:"Lokaal ingekochte zorg.",ctx:"",fields:"",cat:"WMO",team:"Contractbeheer & Inkoop",status:"Concept",date:"—",notes:""},
+  {id:"D-048",term:"Maatwerk verlenging",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-049",term:"Meerkosten",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-050",term:"Reden Maatwerk",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-051",term:"Overzorgkosten",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+  {id:"D-052",term:"Uitnutting",def:"",ctx:"",fields:"",cat:"",team:"",status:"Concept",date:"—",notes:""},
+];
+
+// State
+let entries = [];
+let currentId = null;
+let editingId = null;
+let isNew = false;
+
+function loadData() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      entries = JSON.parse(stored);
+    } else {
+      entries = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      saveData();
+    }
+  } catch(e) {
+    entries = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(e) {}
+}
+
+function nextId() {
+  const nums = entries.map(e => parseInt(e.id.replace('D-',''))).filter(n => !isNaN(n));
+  const max = nums.length ? Math.max(...nums) : 0;
+  return 'D-' + String(max + 1).padStart(3,'0');
+}
+
+function statusBadge(s) {
+  const map = {
+    'Vastgesteld': 'bdg-vastgesteld',
+    'Concept': 'bdg-concept',
+    'In review': 'bdg-review',
+    'Vervallen': 'bdg-vervallen',
+  };
+  const cls = map[s] || 'bdg-leeg';
+  return `<span class="bdg ${cls}">${s || '—'}</span>`;
+}
+
+// catPill is defined dynamically in categorie module below
+
+function emptySpan(txt) {
+  return `<span class="detail-empty-field">${txt}</span>`;
+}
+
+function renderTable(filter) {
+  const tbody = document.getElementById('tableBody');
+  const noRes = document.getElementById('noResults');
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const cat = document.getElementById('filterCat').value;
+  const status = document.getElementById('filterStatus').value;
+  const team = document.getElementById('filterTeam').value;
+
+  const filtered = entries.filter(e => {
+    if (cat && e.cat !== cat) return false;
+    if (status && e.status !== status) return false;
+    if (team && e.team !== team) return false;
+    if (q) {
+      const hay = [e.id,e.term,e.def,e.ctx,e.fields,e.notes].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('countLabel').textContent = filtered.length + ' begrippen';
+  document.getElementById('ftrCount').textContent = entries.length + ' begrippen totaal';
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    noRes.style.display = 'block';
+    return;
+  }
+  noRes.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(e => `
+    <tr onclick="selectEntry('${e.id}')" class="${e.id === currentId ? 'selected' : ''}">
+      <td class="id-cell">${e.id}</td>
+      <td>
+        <div class="term-cell">${e.term || '<em style="color:var(--bd)">—</em>'}</div>
+        ${e.def ? `<div class="def-preview">${e.def}</div>` : ''}
+      </td>
+      <td class="cat-cell">${catPill(e.cat)}</td>
+      <td style="font-size:.68rem;color:var(--sub);white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;">${e.team || '—'}</td>
+      <td>${statusBadge(e.status)}</td>
+    </tr>
+  `).join('');
+}
+
+function selectEntry(id) {
+  currentId = id;
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+
+  document.getElementById('detailEmpty').style.display = 'none';
+  const dc = document.getElementById('detailContent');
+  dc.style.display = 'flex';
+  dc.style.flexDirection = 'column';
+  dc.style.minHeight = '0';
+  dc.style.flex = '1';
+
+  closeEdit();
+
+  document.getElementById('dId').textContent = e.id;
+  document.getElementById('dTerm').textContent = e.term || '—';
+  document.getElementById('dCatBadge').innerHTML = catPill(e.cat);
+  document.getElementById('dStatusBadge').innerHTML = statusBadge(e.status);
+  document.getElementById('dDef').innerHTML = e.def ? e.def.replace(/\n/g,'<br>') : emptySpan('Nog geen definitie ingevuld');
+  document.getElementById('dCtx').innerHTML = e.ctx ? e.ctx.replace(/\n/g,'<br>') : emptySpan('Nog geen business context ingevuld');
+  document.getElementById('dNotes').innerHTML = e.notes ? e.notes : emptySpan('—');
+  document.getElementById('dTeam').textContent = e.team || '—';
+  document.getElementById('dDate').textContent = e.date || '—';
+  document.getElementById('dCat').textContent = e.cat || '—';
+  document.getElementById('dStatus').textContent = e.status || '—';
+
+  const fw = document.getElementById('dFields');
+  if (e.fields) {
+    const chips = e.fields.split(',').map(f => f.trim()).filter(Boolean);
+    fw.innerHTML = chips.map(f => `<span class="data-field-chip">${f}</span>`).join('');
+  } else {
+    fw.innerHTML = emptySpan('Nog geen datavelden gedefinieerd');
+  }
+
+  renderTable();
+}
+
+function openEdit(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  editingId = id;
+  isNew = false;
+  document.getElementById('editTitle').textContent = 'Begrip bewerken — ' + e.id;
+  document.getElementById('eId').value = e.id;
+  document.getElementById('eTerm').value = e.term || '';
+  document.getElementById('eDef').value = e.def || '';
+  document.getElementById('eCtx').value = e.ctx || '';
+  document.getElementById('eFields').value = e.fields || '';
+  document.getElementById('eCat').value = e.cat || '';
+  document.getElementById('eStatus').value = e.status || 'Concept';
+  document.getElementById('eTeam').value = e.team || '';
+  document.getElementById('eDate').value = e.date || '';
+  document.getElementById('eNotes').value = e.notes || '';
+  document.getElementById('editPanel').classList.add('open');
+}
+
+function openNew() {
+  isNew = true;
+  editingId = null;
+  const newId = nextId();
+  document.getElementById('editTitle').textContent = 'Nieuw begrip toevoegen';
+  document.getElementById('eId').value = newId;
+  document.getElementById('eTerm').value = '';
+  document.getElementById('eDef').value = '';
+  document.getElementById('eCtx').value = '';
+  document.getElementById('eFields').value = '';
+  document.getElementById('eCat').value = '';
+  document.getElementById('eStatus').value = 'Concept';
+  document.getElementById('eTeam').value = '';
+  document.getElementById('eDate').value = '';
+  document.getElementById('eNotes').value = '';
+  document.getElementById('detailEmpty').style.display = 'none';
+  document.getElementById('detailContent').style.display = 'none';
+  document.getElementById('editPanel').classList.add('open');
+}
+
+function closeEdit() {
+  document.getElementById('editPanel').classList.remove('open');
+}
+
+function saveEntry() {
+  const term = document.getElementById('eTerm').value.trim();
+  if (!term) { alert('Vul minimaal een term in.'); return; }
+
+  const obj = {
+    id: document.getElementById('eId').value,
+    term,
+    def: document.getElementById('eDef').value.trim(),
+    ctx: document.getElementById('eCtx').value.trim(),
+    fields: document.getElementById('eFields').value.trim(),
+    cat: document.getElementById('eCat').value,
+    team: document.getElementById('eTeam').value,
+    status: document.getElementById('eStatus').value,
+    date: document.getElementById('eDate').value.trim() || '—',
+    notes: document.getElementById('eNotes').value.trim(),
+  };
+
+  if (isNew) {
+    entries.push(obj);
+  } else {
+    const idx = entries.findIndex(e => e.id === editingId);
+    if (idx >= 0) entries[idx] = obj;
+  }
+
+  saveData();
+  closeEdit();
+  currentId = obj.id;
+  renderTable();
+  selectEntry(obj.id);
+}
+
+function deleteEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  if (!confirm(`Wil je "${e.term}" (${e.id}) verwijderen?\n\nTip: overweeg de status op 'Vervallen' te zetten om historisch overzicht te bewaren.`)) return;
+  entries = entries.filter(x => x.id !== id);
+  saveData();
+  currentId = null;
+  document.getElementById('detailEmpty').style.display = 'flex';
+  document.getElementById('detailContent').style.display = 'none';
+  renderTable();
+}
+
+// ── Beheer: Categorieën, Teams, Statussen ────────────────────────
+
+const CAT_KEY    = 'medemblik_categorieen_v1';
+const TEAM_KEY   = 'medemblik_teams_v1';
+const STATUS_KEY = 'medemblik_statussen_v1';
+
+const COLOR_MAP = {
+  blue:   {bg:'#E6F1FB', color:'#185FA5', dot:'#378ADD'},
+  green:  {bg:'#E1F5EE', color:'#0B6E49', dot:'#1D9E75'},
+  purple: {bg:'#EDE9FC', color:'#534AB7', dot:'#7F77DD'},
+  orange: {bg:'#FFF0E6', color:'#993C1D', dot:'#F26722'},
+  teal:   {bg:'#E0F7F9', color:'#0C6E78', dot:'#16BECF'},
+  red:    {bg:'#FAECE7', color:'#993C1D', dot:'#E24B4A'},
+  gray:   {bg:'#F2F5F9', color:'#4A6180', dot:'#888780'},
+};
+
+const DEFAULT_CATS = [
+  {name:'WMO',            color:'blue'},
+  {name:'Jeugd',          color:'green'},
+  {name:'Jeugd/WMO',      color:'purple'},
+  {name:'Sociaal Domein', color:'purple'},
+  {name:'Toegang',        color:'orange'},
+  {name:'In/Uitstroom',   color:'teal'},
+];
+const DEFAULT_TEAMS = [
+  'Beleids- & Datateam Jeugd',
+  'Beleids- & Datateam WMO',
+  'Contractbeheer & Inkoop',
+  'Toegang & Wijkteams',
+  'Team Jeugd',
+];
+const DEFAULT_STATUSES = [
+  {name:'Vastgesteld', color:'green'},
+  {name:'Concept',     color:'orange'},
+  {name:'In review',   color:'blue'},
+  {name:'Vervallen',   color:'red'},
+];
+
+let categories = [];
+let teams      = [];
+let statuses   = [];
+let tempCats   = [];
+let tempTeams  = [];
+let tempStats  = [];
+let activeTab  = 'cat';
+
+// ── Load / Save ───────────────────────────────────────────────────
+function loadMeta() {
+  try { categories = JSON.parse(localStorage.getItem(CAT_KEY))  || JSON.parse(JSON.stringify(DEFAULT_CATS));    } catch(e){ categories = JSON.parse(JSON.stringify(DEFAULT_CATS)); }
+  try { teams      = JSON.parse(localStorage.getItem(TEAM_KEY)) || JSON.parse(JSON.stringify(DEFAULT_TEAMS));   } catch(e){ teams      = JSON.parse(JSON.stringify(DEFAULT_TEAMS)); }
+  try { statuses   = JSON.parse(localStorage.getItem(STATUS_KEY))|| JSON.parse(JSON.stringify(DEFAULT_STATUSES));} catch(e){ statuses   = JSON.parse(JSON.stringify(DEFAULT_STATUSES)); }
+}
+// keep backward compat alias
+function loadCats() { loadMeta(); }
+
+function saveMetaData() {
+  try { localStorage.setItem(CAT_KEY,    JSON.stringify(categories)); } catch(e){}
+  try { localStorage.setItem(TEAM_KEY,   JSON.stringify(teams));      } catch(e){}
+  try { localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));   } catch(e){}
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function getCatStyle(name) {
+  const cat = categories.find(c => c.name === name);
+  return COLOR_MAP[cat ? cat.color : 'gray'] || COLOR_MAP.gray;
+}
+function getStatusStyle(name) {
+  const s = statuses.find(s => s.name === name);
+  return COLOR_MAP[s ? s.color : 'gray'] || COLOR_MAP.gray;
+}
+
+function catPill(name) {
+  if (!name) return '';
+  const s = getCatStyle(name);
+  return `<span class="cat-pill" style="background:${s.bg};color:${s.color};">${name}</span>`;
+}
+
+function statusBadge(name) {
+  if (!name) return '<span class="bdg bdg-leeg">—</span>';
+  const s = getStatusStyle(name);
+  return `<span class="bdg" style="background:${s.bg};color:${s.color};">
+    <span style="width:5px;height:5px;border-radius:50%;background:${s.dot};display:inline-block;flex-shrink:0;"></span>
+    ${name}
+  </span>`;
+}
+
+// ── Rebuild dropdowns ─────────────────────────────────────────────
+function rebuildCatDropdowns() {
+  // Filter cat
+  const fc = document.getElementById('filterCat');
+  const pfc = fc.value;
+  fc.innerHTML = '<option value="">Alle categorieën</option>' +
+    categories.map(c=>`<option value="${c.name}"${c.name===pfc?' selected':''}>${c.name}</option>`).join('');
+  // Edit cat
+  const ec = document.getElementById('eCat');
+  const pec = ec.value;
+  ec.innerHTML = '<option value="">— kies —</option>' +
+    categories.map(c=>`<option value="${c.name}"${c.name===pec?' selected':''}>${c.name}</option>`).join('');
+
+  // Filter status
+  const fs = document.getElementById('filterStatus');
+  const pfs = fs.value;
+  fs.innerHTML = '<option value="">Alle statussen</option>' +
+    statuses.map(s=>`<option value="${s.name}"${s.name===pfs?' selected':''}>${s.name}</option>`).join('');
+  // Edit status
+  const es = document.getElementById('eStatus');
+  const pes = es.value;
+  es.innerHTML = statuses.map(s=>`<option value="${s.name}"${s.name===pes?' selected':''}>${s.name}</option>`).join('');
+
+  // Filter team
+  const ft = document.getElementById('filterTeam');
+  const pft = ft.value;
+  ft.innerHTML = '<option value="">Alle teams</option>' +
+    teams.map(t=>`<option value="${t}"${t===pft?' selected':''}>${t}</option>`).join('');
+  // Edit team
+  const et = document.getElementById('eTeam');
+  const pet = et.value;
+  et.innerHTML = '<option value="">— kies —</option>' +
+    teams.map(t=>`<option value="${t}"${t===pet?' selected':''}>${t}</option>`).join('');
+}
+
+// ── Modal open/close/tabs ─────────────────────────────────────────
+function openCatModal() {
+  tempCats  = JSON.parse(JSON.stringify(categories));
+  tempTeams = JSON.parse(JSON.stringify(teams));
+  tempStats = JSON.parse(JSON.stringify(statuses));
+  activeTab = 'cat';
+  updateTabCounts();
+  renderAllPanes();
+  switchTab('cat');
+  document.getElementById('catModal').classList.add('open');
+}
+
+function closeCatModal() {
+  document.getElementById('catModal').classList.remove('open');
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  ['cat','team','status'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('pane-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+function updateTabCounts() {
+  document.getElementById('tc-cat').textContent    = tempCats.length;
+  document.getElementById('tc-team').textContent   = tempTeams.length;
+  document.getElementById('tc-status').textContent = tempStats.length;
+}
+
+function colorOptions(selected) {
+  return Object.entries({blue:'Blauw',green:'Groen',purple:'Paars',orange:'Oranje',teal:'Teal',red:'Rood',gray:'Grijs'})
+    .map(([v,l])=>`<option value="${v}"${v===selected?' selected':''}>${l}</option>`).join('');
+}
+
+function delIcon() {
+  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+}
+
+// ── Categorieën pane ──────────────────────────────────────────────
+function renderCatList() {
+  document.getElementById('catList').innerHTML = tempCats.map((c,i) => {
+    const s   = COLOR_MAP[c.color] || COLOR_MAP.gray;
+    const cnt = entries.filter(e=>e.cat===c.name).length;
+    return `<div class="item-row">
+      <span class="color-dot" style="background:${s.dot};"></span>
+      <input class="item-name-input" value="${c.name.replace(/"/g,'&quot;')}" onchange="tempCats[${i}].name=this.value" placeholder="Categorienaam">
+      <select class="color-sel" onchange="tempCats[${i}].color=this.value;renderCatList()">${colorOptions(c.color)}</select>
+      <span class="item-count">${cnt}</span>
+      <button class="btn-del-item" onclick="removeTempCat(${i})" title="Verwijder">${delIcon()}</button>
+    </div>`;
+  }).join('');
+  updateTabCounts();
+}
+
+function removeTempCat(i) {
+  const name = tempCats[i].name;
+  const cnt  = entries.filter(e=>e.cat===name).length;
+  if (cnt>0 && !confirm(`"${name}" is gekoppeld aan ${cnt} begrip(pen). Doorgaan?`)) return;
+  tempCats.splice(i,1);
+  renderCatList();
+}
+
+function addCatRow() {
+  const inp  = document.getElementById('newCatName');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  if (tempCats.find(c=>c.name.toLowerCase()===name.toLowerCase())) { alert('Naam bestaat al.'); return; }
+  tempCats.push({name, color: document.getElementById('newCatColor').value});
+  inp.value = '';
+  renderCatList();
+}
+
+// ── Teams pane ────────────────────────────────────────────────────
+function renderTeamList() {
+  document.getElementById('teamList').innerHTML = tempTeams.map((t,i) => {
+    const cnt = entries.filter(e=>e.team===t).length;
+    return `<div class="item-row">
+      <span class="color-dot" style="background:var(--zb);"></span>
+      <input class="item-name-input" value="${t.replace(/"/g,'&quot;')}" onchange="tempTeams[${i}]=this.value" placeholder="Teamnaam">
+      <span class="item-count">${cnt}</span>
+      <button class="btn-del-item" onclick="removeTempTeam(${i})" title="Verwijder">${delIcon()}</button>
+    </div>`;
+  }).join('');
+  updateTabCounts();
+}
+
+function removeTempTeam(i) {
+  const name = tempTeams[i];
+  const cnt  = entries.filter(e=>e.team===name).length;
+  if (cnt>0 && !confirm(`"${name}" is gekoppeld aan ${cnt} begrip(pen). Doorgaan?`)) return;
+  tempTeams.splice(i,1);
+  renderTeamList();
+}
+
+function addTeamRow() {
+  const inp  = document.getElementById('newTeamName');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  if (tempTeams.find(t=>t.toLowerCase()===name.toLowerCase())) { alert('Naam bestaat al.'); return; }
+  tempTeams.push(name);
+  inp.value = '';
+  renderTeamList();
+}
+
+// ── Statussen pane ────────────────────────────────────────────────
+function renderStatusList() {
+  document.getElementById('statusList').innerHTML = tempStats.map((s,i) => {
+    const st  = COLOR_MAP[s.color] || COLOR_MAP.gray;
+    const cnt = entries.filter(e=>e.status===s.name).length;
+    return `<div class="item-row">
+      <span class="color-dot" style="background:${st.dot};"></span>
+      <input class="item-name-input" value="${s.name.replace(/"/g,'&quot;')}" onchange="tempStats[${i}].name=this.value" placeholder="Statusnaam">
+      <select class="color-sel" onchange="tempStats[${i}].color=this.value;renderStatusList()">${colorOptions(s.color)}</select>
+      <span class="item-count">${cnt}</span>
+      <button class="btn-del-item" onclick="removeTempStatus(${i})" title="Verwijder">${delIcon()}</button>
+    </div>`;
+  }).join('');
+  updateTabCounts();
+}
+
+function removeTempStatus(i) {
+  const name = tempStats[i].name;
+  const cnt  = entries.filter(e=>e.status===name).length;
+  if (cnt>0 && !confirm(`"${name}" is gekoppeld aan ${cnt} begrip(pen). Doorgaan?`)) return;
+  tempStats.splice(i,1);
+  renderStatusList();
+}
+
+function addStatusRow() {
+  const inp  = document.getElementById('newStatusName');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  if (tempStats.find(s=>s.name.toLowerCase()===name.toLowerCase())) { alert('Naam bestaat al.'); return; }
+  tempStats.push({name, color: document.getElementById('newStatusColor').value});
+  inp.value = '';
+  renderStatusList();
+}
+
+function renderAllPanes() {
+  renderCatList();
+  renderTeamList();
+  renderStatusList();
+}
+
+// ── Save all ──────────────────────────────────────────────────────
+function saveAll() {
+  // Apply renames: positional rename for cats and statuses
+  categories.forEach((old,i) => {
+    const nw = tempCats[i];
+    if (nw && nw.name !== old.name) entries.forEach(e=>{ if(e.cat===old.name) e.cat=nw.name; });
+  });
+  teams.forEach((old,i) => {
+    const nw = tempTeams[i];
+    if (nw && nw !== old) entries.forEach(e=>{ if(e.team===old) e.team=nw; });
+  });
+  statuses.forEach((old,i) => {
+    const nw = tempStats[i];
+    if (nw && nw.name !== old.name) entries.forEach(e=>{ if(e.status===old.name) e.status=nw.name; });
+  });
+
+  categories = JSON.parse(JSON.stringify(tempCats));
+  teams      = JSON.parse(JSON.stringify(tempTeams));
+  statuses   = JSON.parse(JSON.stringify(tempStats));
+
+  saveMetaData();
+  saveData();
+  rebuildCatDropdowns();
+  renderTable();
+  if (currentId) selectEntry(currentId);
+  closeCatModal();
+}
+
+// Keep backward compat alias
+function saveCats() { saveAll(); }
+
+// ── Filters ───────────────────────────────────────────────────────
+['searchInput','filterCat','filterStatus','filterTeam'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => renderTable());
+  document.getElementById(id).addEventListener('change', () => renderTable());
+});
+
+document.getElementById('catModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCatModal();
+});
+
+// Footer date
+document.getElementById('ftrDate').textContent = 'Bijgewerkt op ' + new Date().toLocaleDateString('nl-NL', {day:'2-digit',month:'long',year:'numeric'});
+
+// ── Init ──────────────────────────────────────────────────────────
+loadMeta();
+loadData();
+rebuildCatDropdowns();
+renderTable();
+</script>
+</body>
+</html>
