@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Definitiecatalogus — Sociaal Domein | Gemeente Medemblik</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -13,6 +14,7 @@ html,body{height:100%;}
   --lg:#F2F5F9;--bd:#DDE3EC;--w:#fff;--sub:#4A6180;
 }
 body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:var(--lg);color:var(--n);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+#view-definities,#view-processen{flex:1 1 0;min-height:0;}
 
 /* Header */
 .hdr{height:52px;flex:0 0 52px;background:var(--n);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
@@ -78,9 +80,10 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
 
 /* Detail panel */
 .detail-panel{display:flex;flex-direction:column;min-height:0;background:var(--w);}
-.detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--sub);}
-.detail-empty svg{opacity:.3;}
-.detail-empty p{font-size:.75rem;}
+.detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--sub);padding:40px;}
+.detail-empty svg{opacity:.18;}
+.detail-empty p{font-size:.92rem;font-weight:600;color:var(--sub);}
+.detail-empty-hint{font-size:.72rem;color:var(--bd);margin-top:-8px;}
 .detail-scroll{flex:1;overflow-y:auto;min-height:0;padding:20px;}
 .detail-scroll::-webkit-scrollbar{width:4px;}
 .detail-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
@@ -123,14 +126,132 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
 .btn-cancel{font-family:inherit;font-size:.72rem;font-weight:600;background:var(--w);color:var(--sub);border:1.5px solid var(--bd);border-radius:8px;padding:8px 16px;cursor:pointer;transition:all .15s;}
 .btn-cancel:hover{border-color:var(--s);color:var(--s);}
 
+/* Tab nav */
+.tab-nav{height:38px;flex:0 0 38px;background:var(--w);border-bottom:2px solid var(--bd);display:flex;align-items:flex-end;padding:0 16px;gap:2px;}
+.tab-nav-btn{font-family:inherit;font-size:.72rem;font-weight:700;color:var(--sub);background:none;border:none;border-bottom:2.5px solid transparent;padding:8px 16px;margin-bottom:-2px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:color .15s;}
+.tab-nav-btn.active{color:var(--s);border-bottom-color:var(--s);}
+.tab-nav-btn:hover:not(.active){color:var(--n);}
+.tab-nav-new{font-size:.58rem;background:rgba(22,190,207,.13);color:var(--zb);border:1px solid rgba(22,190,207,.3);border-radius:8px;padding:1px 6px;font-weight:700;}
+
+/* Processen view */
+.proc-view{display:none;flex:1 1 0;min-height:0;flex-direction:column;}
+.proc-view.active{display:flex;}
+.proc-library{flex:1 1 0;min-height:0;overflow-y:auto;padding:20px;}
+.proc-library::-webkit-scrollbar{width:4px;}
+.proc-library::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+.proc-lib-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.proc-lib-title{font-size:.85rem;font-weight:700;color:var(--n);}
+.proc-lib-hint{font-size:.68rem;color:var(--sub);margin-top:2px;}
+.proc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.proc-card{background:var(--w);border:1.5px solid var(--bd);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.proc-card:hover{border-color:var(--s);box-shadow:0 2px 8px rgba(0,84,150,.08);}
+.proc-card-title{font-size:.78rem;font-weight:700;color:var(--n);margin-bottom:4px;}
+.proc-card-meta{font-size:.62rem;color:var(--sub);margin-bottom:8px;}
+.proc-card-tags{display:flex;flex-wrap:wrap;gap:4px;}
+.proc-card-tag{font-size:.58rem;font-weight:600;background:#E6F1FB;color:#185FA5;border-radius:8px;padding:2px 7px;}
+.proc-card-new{border:1.5px dashed var(--bd);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:100px;}
+.proc-card-new:hover{border-color:var(--s);}
+.proc-card-new-icon{font-size:1.4rem;color:var(--bd);}
+.proc-card-new-lbl{font-size:.68rem;color:var(--sub);}
+
+/* Canvas editor */
+.proc-editor{display:none;flex:1 1 0;min-height:0;flex-direction:column;}
+.proc-editor.active{display:flex;}
+.proc-editor-bar{height:42px;flex:0 0 42px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 14px;gap:8px;}
+.proc-editor-title{font-size:.78rem;font-weight:700;color:var(--n);flex:1;}
+.btn-back{font-family:inherit;font-size:.7rem;font-weight:600;background:none;border:1.5px solid var(--bd);border-radius:10px;padding:5px 12px;cursor:pointer;color:var(--sub);display:flex;align-items:center;gap:5px;transition:all .15s;}
+.btn-back:hover{border-color:var(--s);color:var(--s);}
+.btn-del-proc{font-family:inherit;font-size:.7rem;font-weight:600;background:none;border:1.5px solid var(--bd);border-radius:10px;padding:5px 12px;cursor:pointer;color:var(--sub);transition:all .15s;}
+.btn-del-proc:hover{border-color:#E24B4A;color:#E24B4A;}
+.proc-editor-main{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 260px;}
+.proc-canvas-wrap{position:relative;overflow:hidden;background:#F8FAFD;border-right:1px solid var(--bd);}
+.proc-canvas{width:100%;height:100%;position:relative;}
+.proc-sidebar{display:flex;flex-direction:column;background:var(--w);min-height:0;}
+.proc-sidebar-section{padding:14px;border-bottom:1px solid var(--bd);}
+.proc-sidebar-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin-bottom:8px;}
+
+/* Canvas node styles */
+.cn{position:absolute;border-radius:8px;font-family:inherit;font-size:.7rem;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:grab;user-select:none;padding:8px 12px;min-width:130px;min-height:48px;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:box-shadow .15s;}
+.cn:active{cursor:grabbing;}
+.cn.selected{box-shadow:0 0 0 2.5px var(--s),0 2px 8px rgba(0,84,150,.15);}
+.cn.type-start{background:#D6EFE9;color:#0B6E49;border:1.5px solid #9FD9C8;}
+.cn.type-step{background:#E6F1FB;color:#185FA5;border:1.5px solid #B5D4F4;}
+.cn.type-decision{background:#FFF0E6;color:#993C1D;border:1.5px solid #F5C4B3;border-radius:4px;}
+.cn.type-action{background:#EDE9FC;color:#534AB7;border:1.5px solid #AFA9EC;}
+.cn.type-end{background:#E1F5EE;color:#0B6E49;border:1.5px solid #9FD9C8;}
+.cn-sub{font-size:.58rem;font-weight:400;opacity:.75;margin-top:2px;}
+.cn-link-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--s);border:2px solid #fff;cursor:crosshair;opacity:0;transition:opacity .15s;}
+.cn:hover .cn-link-dot{opacity:1;}
+.cn-link-dot.bottom{bottom:-5px;left:50%;transform:translateX(-50%);}
+.cn-link-dot.top{top:-5px;left:50%;transform:translateX(-50%);}
+.cn-link-dot.right{right:-5px;top:50%;transform:translateY(-50%);}
+.cn-link-dot.left{left:-5px;top:50%;transform:translateY(-50%);}
+
+/* SVG arrows layer */
+#proc-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+.proc-edge{stroke:#94A3B8;stroke-width:1.5;fill:none;marker-end:url(#proc-arrow);}
+.proc-edge-label{font-size:10px;fill:#64748B;font-family:inherit;pointer-events:none;}
+.proc-edge-hit{stroke:transparent;stroke-width:12;fill:none;cursor:pointer;pointer-events:all;}
+
+/* Node palette buttons */
+.palette-btn{font-family:inherit;font-size:.68rem;font-weight:700;border:1.5px solid var(--bd);border-radius:8px;padding:7px 10px;cursor:pointer;width:100%;text-align:left;margin-bottom:5px;transition:all .15s;display:flex;align-items:center;gap:8px;}
+.palette-btn:hover{border-color:var(--s);color:var(--s);}
+.palette-btn .pb-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+/* Node detail panel */
+.node-detail{flex:1;padding:14px;overflow-y:auto;display:none;}
+.node-detail.active{display:block;}
+.nd-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin-bottom:5px;display:block;}
+.nd-input{font-family:inherit;font-size:.75rem;width:100%;border:1.5px solid var(--bd);border-radius:7px;padding:6px 9px;outline:none;color:var(--n);background:var(--w);transition:border .15s;}
+.nd-input:focus{border-color:var(--s);}
+.nd-sel{font-family:inherit;font-size:.72rem;width:100%;border:1.5px solid var(--bd);border-radius:7px;padding:6px 9px;outline:none;color:var(--n);background:var(--w);}
+.nd-group{margin-bottom:12px;}
+.linked-def-chip{display:inline-flex;align-items:center;gap:5px;background:#E6F1FB;color:#185FA5;border-radius:8px;padding:3px 8px;font-size:.62rem;font-weight:700;margin:2px;}
+.linked-def-chip button{border:none;background:none;color:#185FA5;cursor:pointer;padding:0;font-size:.75rem;line-height:1;}
+.def-result-item{padding:6px 10px;font-size:.68rem;cursor:pointer;border-bottom:1px solid var(--bd);color:var(--n);line-height:1.4;}
+.def-result-item:last-child{border-bottom:none;}
+.def-result-item:hover{background:var(--lg);color:var(--s);}
+.def-result-item .def-id{font-weight:700;color:var(--s);margin-right:5px;}
+.def-result-empty{padding:8px 10px;font-size:.65rem;color:var(--sub);font-style:italic;}
+.nd-hint{font-size:.62rem;color:var(--sub);font-style:italic;padding:20px 0;text-align:center;}
+
+.nd-conn-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:.65rem;}
+.nd-conn-row:last-child{border-bottom:none;}
+.btn-del-conn{border:none;background:none;color:var(--bd);cursor:pointer;font-size:.85rem;line-height:1;padding:0;}
+.btn-del-conn:hover{color:#E24B4A;}
+
 /* Footer */
 .ftr{height:26px;flex:0 0 26px;background:var(--n);display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
 .ftr span{font-size:.6rem;color:rgba(255,255,255,.45);}
 
+/* Required field label */
+.form-label .req{color:#E24B4A;margin-left:2px;}
+.form-input.invalid,.form-textarea.invalid,.form-select.invalid{border-color:#E24B4A;background:#FFF5F5;}
+.form-err{font-size:.62rem;color:#E24B4A;margin-top:3px;display:none;}
+.form-err.show{display:block;}
+
+/* Changelog */
+.changelog-wrap{margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);}
+.changelog-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--sub);margin-bottom:6px;}
+.changelog-list{display:flex;flex-direction:column;gap:4px;}
+.changelog-item{display:flex;align-items:baseline;gap:8px;font-size:.65rem;color:var(--sub);}
+.changelog-dot{width:6px;height:6px;border-radius:50%;background:var(--bd);flex-shrink:0;margin-top:1px;}
+.changelog-date{font-weight:700;color:var(--n);white-space:nowrap;}
+.changelog-action{color:var(--sub);}
+
+/* Source URL in detail */
+.detail-url-wrap{margin-top:6px;}
+.detail-url-link{font-size:.7rem;color:var(--s);text-decoration:none;display:inline-flex;align-items:center;gap:5px;word-break:break-all;}
+.detail-url-link:hover{text-decoration:underline;}
+.detail-url-link svg{flex-shrink:0;}
+
+/* Search highlight */
+mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
+
+
 /* Empty state */
 .no-results{padding:40px;text-align:center;color:var(--sub);font-size:.78rem;}
 
-/* Tooltip */
 .tooltip{position:fixed;background:var(--n);color:#fff;padding:4px 10px;border-radius:6px;font-size:.65rem;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;}
 
 /* Beheer modal */
@@ -164,8 +285,10 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
 .add-input:focus{border-color:var(--s);}
 .btn-add-item{font-family:inherit;font-size:.7rem;font-weight:700;background:var(--s);color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;white-space:nowrap;transition:background .15s;}
 .btn-add-item:hover{background:var(--n);}
-.btn-settings{border:1.5px solid var(--bd);background:var(--w);border-radius:16px;padding:5px 10px;cursor:pointer;color:var(--sub);display:flex;align-items:center;gap:5px;font-family:inherit;font-size:.68rem;font-weight:600;transition:all .15s;}
-.btn-settings:hover{border-color:var(--s);color:var(--s);}
+.btn-excel{font-family:inherit;font-size:.7rem;font-weight:700;background:#1D6F42;color:#fff;border:none;border-radius:16px;padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;white-space:nowrap;}
+.btn-excel:hover{background:#155232;}
+.btn-excel svg{flex-shrink:0;}
+
 .status-preview{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.6rem;font-weight:700;}
 .section-hint{font-size:.66rem;color:var(--sub);margin-bottom:10px;line-height:1.5;}
 </style>
@@ -200,13 +323,28 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     Categorieën
   </button>
+  <button class="btn-excel" onclick="exportToExcel()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9 12 11"/></svg>
+    Exporteer Excel
+  </button>
   <button class="btn-add" onclick="openNew()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     Nieuw begrip
   </button>
 </div>
 
-<!-- Beheer modal (Categorieën / Teams / Statussen) -->
+<!-- Tab navigation -->
+<div class="tab-nav">
+  <button class="tab-nav-btn active" id="navDefinities" onclick="switchMainTab('definities')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    Definities
+  </button>
+  <button class="tab-nav-btn" id="navProcessen" onclick="switchMainTab('processen')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M10.5 17.5L7 16M13.5 17.5L17 16"/></svg>
+    Processen
+    <span class="tab-nav-new">NIEUW</span>
+  </button>
+</div>
 <div class="modal-overlay" id="catModal">
   <div class="modal">
     <div class="modal-hdr">
@@ -278,6 +416,8 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
   </div>
 </div>
 
+<!-- Definities view -->
+<div id="view-definities" style="flex:1 1 0;min-height:0;display:flex;flex-direction:column;">
 <div class="main">
   <div class="tbl-panel">
     <div class="tbl-wrap">
@@ -299,8 +439,9 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
 
   <div class="detail-panel" id="detailPanel">
     <div class="detail-empty" id="detailEmpty">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" color="#005496"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
       <p>Selecteer een begrip om details te zien</p>
+      <span class="detail-empty-hint">Klik op een rij in de tabel aan de linkerkant</span>
     </div>
     <div id="detailContent" style="display:none;flex:1;display:none;flex-direction:column;min-height:0;">
       <div class="detail-scroll">
@@ -343,6 +484,11 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
           <div class="detail-text" id="dNotes"></div>
         </div>
 
+        <div class="detail-section" id="dSourceSection">
+          <div class="section-label">Bronverwijzing</div>
+          <div class="detail-url-wrap" id="dSourceWrap"></div>
+        </div>
+
         <div class="detail-meta">
           <div class="meta-item">
             <div class="meta-key">Verantwoordelijk team</div>
@@ -360,6 +506,11 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
             <div class="meta-key">Status</div>
             <div class="meta-val" id="dStatus"></div>
           </div>
+        </div>
+
+        <div class="changelog-wrap">
+          <div class="changelog-label">Wijzigingshistorie</div>
+          <div class="changelog-list" id="dChangelog"></div>
         </div>
       </div>
     </div>
@@ -379,13 +530,15 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
             <input class="form-input" id="eId" placeholder="D-001" style="background:var(--lg);" readonly>
           </div>
           <div class="form-group">
-            <label class="form-label">Term *</label>
+            <label class="form-label">Term <span class="req">*</span></label>
             <input class="form-input" id="eTerm" placeholder="Naam van het begrip">
+            <div class="form-err" id="errTerm">Term is verplicht</div>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Definitie</label>
+          <label class="form-label">Definitie <span class="req">*</span></label>
           <textarea class="form-textarea" id="eDef" placeholder="De formele, volledige omschrijving van het begrip…" style="min-height:90px;"></textarea>
+          <div class="form-err" id="errDef">Definitie is verplicht</div>
         </div>
         <div class="form-group">
           <label class="form-label">Business context</label>
@@ -414,8 +567,9 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Verantwoordelijk team</label>
+          <label class="form-label">Verantwoordelijk team <span class="req">*</span></label>
           <select class="form-select" id="eTeam"><option value="">— kies —</option></select>
+          <div class="form-err" id="errTeam">Verantwoordelijk team is verplicht</div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -425,6 +579,10 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
           <div class="form-group" style="display:flex;flex-direction:column;">
             &nbsp;
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bronverwijzing (URL)</label>
+          <input class="form-input" id="eSource" type="url" placeholder="https://…">
         </div>
         <div class="form-group">
           <label class="form-label">Opmerkingen</label>
@@ -438,10 +596,114 @@ tbody td{padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;c
     </div>
   </div>
 </div>
+</div><!-- end view-definities -->
+
+<!-- Processen view -->
+<div id="view-processen" style="flex:1 1 0;min-height:0;display:none;flex-direction:column;">
+
+  <!-- Library -->
+  <div class="proc-library" id="proc-library">
+    <div class="proc-lib-header">
+      <div>
+        <div class="proc-lib-title">Procesbibliotheek</div>
+        <div class="proc-lib-hint">Maak procesdiagrammen en koppel stappen aan definities uit de catalogus.</div>
+      </div>
+    </div>
+    <div class="proc-grid" id="proc-grid">
+      <!-- cards rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Editor -->
+  <div class="proc-editor" id="proc-editor">
+    <div class="proc-editor-bar">
+      <button class="btn-back" onclick="procShowLibrary()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Terug
+      </button>
+      <input class="proc-editor-title" id="proc-name-input" style="flex:1;font-family:inherit;font-size:.8rem;font-weight:700;border:none;outline:none;background:none;color:var(--n);padding:0 8px;" placeholder="Procesnaam…" oninput="saveProcesses()">
+      <button class="btn-del-proc" onclick="deleteCurrentProcess()">Verwijderen</button>
+    </div>
+
+    <div class="proc-editor-main">
+      <!-- Canvas -->
+      <div class="proc-canvas-wrap" id="proc-canvas-wrap">
+        <svg id="proc-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;">
+          <defs>
+            <marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+        </svg>
+        <div id="proc-canvas" class="proc-canvas"></div>
+        <!-- Add node hint -->
+        <div id="canvas-hint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="text-align:center;color:var(--bd);">
+            <div style="font-size:2rem;margin-bottom:8px;">⬡</div>
+            <div style="font-size:.72rem;">Voeg een stap toe via het paneel rechts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="proc-sidebar">
+        <!-- Palette -->
+        <div class="proc-sidebar-section">
+          <div class="proc-sidebar-label">Stap toevoegen</div>
+          <button class="palette-btn" onclick="addNode('start')"><span class="pb-dot" style="background:#1D9E75;"></span> Start / melding</button>
+          <button class="palette-btn" onclick="addNode('step')"><span class="pb-dot" style="background:#378ADD;"></span> Processtap</button>
+          <button class="palette-btn" onclick="addNode('decision')"><span class="pb-dot" style="background:#F26722;"></span> Beslissing</button>
+          <button class="palette-btn" onclick="addNode('action')"><span class="pb-dot" style="background:#7F77DD;"></span> Actie / taak</button>
+          <button class="palette-btn" onclick="addNode('end')"><span class="pb-dot" style="background:#1D9E75;"></span> Einde / besluit</button>
+        </div>
+
+        <!-- Connection mode -->
+        <div class="proc-sidebar-section">
+          <div class="proc-sidebar-label">Verbindingen</div>
+          <button class="palette-btn" id="btn-connect-mode" onclick="toggleConnectMode()" style="gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            Verbinden (klik 2 stappen)
+          </button>
+          <p style="font-size:.6rem;color:var(--sub);margin-top:4px;line-height:1.5;" id="connect-hint">Klik op "Verbinden", dan op stap A, dan op stap B.</p>
+        </div>
+
+        <!-- Selected node detail -->
+        <div class="node-detail" id="node-detail">
+          <div class="nd-group">
+            <label class="nd-label">Naam stap</label>
+            <input class="nd-input" id="nd-name" oninput="updateSelectedNode()">
+          </div>
+          <div class="nd-group">
+            <label class="nd-label">Notitie / datumveld</label>
+            <input class="nd-input" id="nd-sub" placeholder="bijv. Datum aanvraag SMA" oninput="updateSelectedNode()">
+          </div>
+          <div class="nd-group">
+            <label class="nd-label">Gekoppelde definities</label>
+            <div id="nd-defs" style="margin-bottom:6px;min-height:18px;"></div>
+            <div style="position:relative;">
+              <input class="nd-input" id="nd-def-search" placeholder="Zoek definitie…" oninput="filterDefPicker(this.value)" onfocus="filterDefPicker(this.value)" autocomplete="off" style="padding-right:28px;">
+              <svg style="position:absolute;right:9px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--sub);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div id="nd-def-results" style="display:none;max-height:140px;overflow-y:auto;border:1.5px solid var(--bd);border-top:none;border-radius:0 0 7px 7px;background:var(--w);"></div>
+          </div>
+          <div class="nd-group">
+            <label class="nd-label">Verbindingen van deze stap</label>
+            <div id="nd-connections" style="font-size:.65rem;"></div>
+          </div>
+          <div class="nd-group" style="margin-top:4px;">
+            <button onclick="deleteSelectedNode()" style="font-family:inherit;font-size:.68rem;font-weight:600;border:1.5px solid var(--bd);border-radius:7px;padding:6px 12px;cursor:pointer;color:#993C1D;background:none;width:100%;transition:all .15s;" onmouseover="this.style.borderColor='#E24B4A'" onmouseout="this.style.borderColor='var(--bd)'">Stap verwijderen</button>
+          </div>
+        </div>
+        <div class="nd-hint" id="nd-hint">Klik op een stap om deze te bewerken</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="ftr">
   <span>Gemeente Medemblik · www.medemblik.nl · Sociaal Domein</span>
   <span id="ftrCount"></span>
+  <span><a href="https://jortarie.github.io/definitiecatalogus-medemblik/" target="_blank" style="color:rgba(255,255,255,.45);text-decoration:none;font-size:.6rem;" onmouseover="this.style.color='#7EEAF3'" onmouseout="this.style.color='rgba(255,255,255,.45)'">jortarie.github.io/definitiecatalogus-medemblik</a></span>
   <span id="ftrDate"></span>
 </div>
 
@@ -552,10 +814,17 @@ function emptySpan(txt) {
   return `<span class="detail-empty-field">${txt}</span>`;
 }
 
+function highlight(text, q) {
+  if (!q || !text) return text || '';
+  const safe = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(safe.replace(safe, q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'gi'),
+    m => `<mark class="hl">${m}</mark>`);
+}
+
 function renderTable(filter) {
   const tbody = document.getElementById('tableBody');
   const noRes = document.getElementById('noResults');
-  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
   const cat = document.getElementById('filterCat').value;
   const status = document.getElementById('filterStatus').value;
   const team = document.getElementById('filterTeam').value;
@@ -581,18 +850,22 @@ function renderTable(filter) {
   }
   noRes.style.display = 'none';
 
-  tbody.innerHTML = filtered.map(e => `
+  tbody.innerHTML = filtered.map(e => {
+    const hl = txt => q ? txt.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m=>`<mark class="hl">${m}</mark>`) : txt;
+    const termHl = hl(e.term || '');
+    const defHl  = e.def ? hl(e.def) : '';
+    return `
     <tr onclick="selectEntry('${e.id}')" class="${e.id === currentId ? 'selected' : ''}">
       <td class="id-cell">${e.id}</td>
       <td>
-        <div class="term-cell">${e.term || '<em style="color:var(--bd)">—</em>'}</div>
-        ${e.def ? `<div class="def-preview">${e.def}</div>` : ''}
+        <div class="term-cell">${termHl || '<em style="color:var(--bd)">—</em>'}</div>
+        ${defHl ? `<div class="def-preview">${defHl}</div>` : ''}
       </td>
       <td class="cat-cell">${catPill(e.cat)}</td>
       <td style="font-size:.68rem;color:var(--sub);white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;">${e.team || '—'}</td>
       <td>${statusBadge(e.status)}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function selectEntry(id) {
@@ -621,12 +894,42 @@ function selectEntry(id) {
   document.getElementById('dCat').textContent = e.cat || '—';
   document.getElementById('dStatus').textContent = e.status || '—';
 
+  // Source URL
+  const srcWrap = document.getElementById('dSourceWrap');
+  const srcSec  = document.getElementById('dSourceSection');
+  if (e.source) {
+    srcSec.style.display = '';
+    let label = e.source;
+    try { label = new URL(e.source).hostname; } catch(_) {}
+    srcWrap.innerHTML = `<a class="detail-url-link" href="${e.source}" target="_blank" rel="noopener">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      ${label}
+    </a>`;
+  } else {
+    srcSec.style.display = 'none';
+  }
+
+  // Datavelden
   const fw = document.getElementById('dFields');
   if (e.fields) {
     const chips = e.fields.split(',').map(f => f.trim()).filter(Boolean);
     fw.innerHTML = chips.map(f => `<span class="data-field-chip">${f}</span>`).join('');
   } else {
     fw.innerHTML = emptySpan('Nog geen datavelden gedefinieerd');
+  }
+
+  // Changelog
+  const cl = document.getElementById('dChangelog');
+  const log = e.changelog || [];
+  if (log.length) {
+    cl.innerHTML = [...log].reverse().map(c => `
+      <div class="changelog-item">
+        <span class="changelog-dot"></span>
+        <span class="changelog-date">${c.date}</span>
+        <span class="changelog-action">${c.action}</span>
+      </div>`).join('');
+  } else {
+    cl.innerHTML = `<div class="changelog-item"><span class="changelog-dot"></span><span class="changelog-action" style="font-style:italic;">Nog geen wijzigingen geregistreerd</span></div>`;
   }
 
   renderTable();
@@ -648,6 +951,14 @@ function openEdit(id) {
   document.getElementById('eTeam').value = e.team || '';
   document.getElementById('eDate').value = e.date || '';
   document.getElementById('eNotes').value = e.notes || '';
+  document.getElementById('eSource').value = e.source || '';
+  // Clear validation states
+  ['eTerm','eDef','eTeam'].forEach(id => {
+    document.getElementById(id).classList.remove('invalid');
+  });
+  ['errTerm','errDef','errTeam'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.classList.remove('show');
+  });
   document.getElementById('editPanel').classList.add('open');
 }
 
@@ -666,6 +977,10 @@ function openNew() {
   document.getElementById('eTeam').value = '';
   document.getElementById('eDate').value = '';
   document.getElementById('eNotes').value = '';
+  document.getElementById('eSource').value = '';
+  // Clear validation
+  ['eTerm','eDef','eTeam'].forEach(id => document.getElementById(id).classList.remove('invalid'));
+  ['errTerm','errDef','errTeam'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('show'); });
   document.getElementById('detailEmpty').style.display = 'none';
   document.getElementById('detailContent').style.display = 'none';
   document.getElementById('editPanel').classList.add('open');
@@ -677,26 +992,66 @@ function closeEdit() {
 
 function saveEntry() {
   const term = document.getElementById('eTerm').value.trim();
-  if (!term) { alert('Vul minimaal een term in.'); return; }
+  const def  = document.getElementById('eDef').value.trim();
+  const team = document.getElementById('eTeam').value;
+
+  // Validate required fields
+  let valid = true;
+  function setErr(fieldId, errId, fail) {
+    document.getElementById(fieldId).classList.toggle('invalid', fail);
+    const el = document.getElementById(errId);
+    if (el) el.classList.toggle('show', fail);
+    if (fail) valid = false;
+  }
+  setErr('eTerm',  'errTerm',  !term);
+  setErr('eDef',   'errDef',   !def);
+  setErr('eTeam',  'errTeam',  !team);
+  if (!valid) return;
+
+  // Clear validation styles
+  ['eTerm','eDef','eTeam'].forEach(id => document.getElementById(id).classList.remove('invalid'));
+
+  const now = new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'});
 
   const obj = {
     id: document.getElementById('eId').value,
     term,
-    def: document.getElementById('eDef').value.trim(),
+    def,
     ctx: document.getElementById('eCtx').value.trim(),
     fields: document.getElementById('eFields').value.trim(),
     cat: document.getElementById('eCat').value,
-    team: document.getElementById('eTeam').value,
+    team,
     status: document.getElementById('eStatus').value,
     date: document.getElementById('eDate').value.trim() || '—',
     notes: document.getElementById('eNotes').value.trim(),
+    source: document.getElementById('eSource').value.trim(),
+    changelog: [],
   };
 
   if (isNew) {
+    obj.changelog = [{date: now, action: 'Aangemaakt'}];
     entries.push(obj);
   } else {
     const idx = entries.findIndex(e => e.id === editingId);
-    if (idx >= 0) entries[idx] = obj;
+    if (idx >= 0) {
+      const old = entries[idx];
+      obj.changelog = [...(old.changelog || [])];
+      // Detect what changed
+      const changes = [];
+      if (old.term !== obj.term) changes.push('term');
+      if (old.def  !== obj.def)  changes.push('definitie');
+      if (old.ctx  !== obj.ctx)  changes.push('business context');
+      if (old.fields !== obj.fields) changes.push('datavelden');
+      if (old.cat  !== obj.cat)  changes.push('categorie');
+      if (old.team !== obj.team) changes.push('team');
+      if (old.status !== obj.status) changes.push('status');
+      if (old.notes !== obj.notes) changes.push('opmerkingen');
+      if ((old.source||'') !== obj.source) changes.push('bronverwijzing');
+      if (changes.length) {
+        obj.changelog.push({date: now, action: 'Gewijzigd: ' + changes.join(', ')});
+      }
+      entries[idx] = obj;
+    }
   }
 
   saveData();
@@ -1015,6 +1370,68 @@ function saveAll() {
 // Keep backward compat alias
 function saveCats() { saveAll(); }
 
+// ── Excel export ──────────────────────────────────────────────────
+function exportToExcel() {
+  // Get currently filtered entries (same logic as renderTable)
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const fCat = document.getElementById('filterCat').value;
+  const fSt  = document.getElementById('filterStatus').value;
+  const fTm  = document.getElementById('filterTeam').value;
+
+  const filtered = entries.filter(e => {
+    if (fCat && e.cat !== fCat) return false;
+    if (fSt  && e.status !== fSt) return false;
+    if (fTm  && e.team !== fTm) return false;
+    if (q) {
+      const hay = [e.id, e.term, e.def, e.ctx, e.fields, e.notes].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) { alert('Geen begrippen om te exporteren.'); return; }
+
+  const rows = filtered.map(e => ({
+    'ID':              e.id,
+    'Term':            e.term,
+    'Definitie':       e.def,
+    'Business context': e.ctx,
+    'Datavelden':      e.fields,
+    'Categorie':       e.cat,
+    'Team':            e.team,
+    'Status':          e.status,
+    'Datum vastgesteld': e.date,
+    'Opmerkingen':     e.notes,
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:8},{wch:28},{wch:55},{wch:45},{wch:40},
+    {wch:18},{wch:30},{wch:14},{wch:18},{wch:35}
+  ];
+
+  // Header style (bold, Medemblik blue fill)
+  const headerRange = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = headerRange.s.c; c <= headerRange.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r:0, c})];
+    if (cell) {
+      cell.s = {
+        font: {bold: true, color: {rgb: 'FFFFFF'}},
+        fill: {fgColor: {rgb: '002E56'}},
+        alignment: {wrapText: false}
+      };
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Definitiecatalogus');
+
+  const date = new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+  XLSX.writeFile(wb, `Definitiecatalogus_Medemblik_${date}.xlsx`);
+}
+
 // ── Filters ───────────────────────────────────────────────────────
 ['searchInput','filterCat','filterStatus','filterTeam'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => renderTable());
@@ -1033,6 +1450,512 @@ loadMeta();
 loadData();
 rebuildCatDropdowns();
 renderTable();
+
+// ── Main tab switching ────────────────────────────────────────────
+function switchMainTab(tab) {
+  const vd = document.getElementById('view-definities');
+  const vp = document.getElementById('view-processen');
+  const nd = document.getElementById('navDefinities');
+  const np = document.getElementById('navProcessen');
+  const tb = document.querySelector('.toolbar');
+  if (tab === 'definities') {
+    vd.style.display = 'flex'; vp.style.display = 'none';
+    nd.classList.add('active'); np.classList.remove('active');
+    tb.style.display = 'flex';
+  } else {
+    vd.style.display = 'none'; vp.style.display = 'flex';
+    nd.classList.remove('active'); np.classList.add('active');
+    tb.style.display = 'none';
+    renderProcLibrary();
+  }
+}
+
+// ── Processen data ────────────────────────────────────────────────
+const PROC_KEY = 'medemblik_processen_v1';
+let processes = [];
+let currentProcId = null;
+let selectedNodeId = null;
+let connectMode = false;
+let connectFrom = null;
+let nodeIdCounter = 0;
+
+function loadProcesses() {
+  try {
+    const s = localStorage.getItem(PROC_KEY);
+    if (s) {
+      processes = JSON.parse(s);
+    } else {
+      // Seed with GPK afhandelingstraject
+      processes = [GPK_DEFAULT_PROCESS()];
+      try { localStorage.setItem(PROC_KEY, JSON.stringify(processes)); } catch(e) {}
+    }
+  } catch(e) { processes = []; }
+}
+
+function GPK_DEFAULT_PROCESS() {
+  return {
+    id: 'proc-gpk-2025',
+    name: 'GPK afhandelingstraject 2025',
+    nodes: [
+      { id:'gpk-n1', type:'start',    name:'Melding binnenkomt',   sub:'Meldingsdatum geregistreerd',  defs:['D-001 Instroom'],           x:220, y:30  },
+      { id:'gpk-n2', type:'step',     name:'Zaak aangemaakt',      sub:'Registratie in MensCentraal',  defs:[],                           x:220, y:130 },
+      { id:'gpk-n3', type:'decision', name:'Medisch advies nodig?',sub:'',                             defs:[],                           x:220, y:230 },
+      { id:'gpk-n4', type:'action',   name:'Dossieronderzoek',     sub:'Intern — niet geregistreerd',  defs:['D-007 Enkelvoudige hulpvraag'], x:60,  y:360 },
+      { id:'gpk-n5', type:'step',     name:'SMA aangevraagd',      sub:'Datum aanvraag SMA',           defs:['D-016 Wachttijd'],          x:390, y:360 },
+      { id:'gpk-n6', type:'step',     name:'Wachten op advies',    sub:'Datum SMA ontvangen',          defs:['D-003 Doorlooptijd'],       x:390, y:460 },
+      { id:'gpk-n7', type:'end',      name:'Besluit (Route B)',     sub:'Registratiedatum besluit',     defs:['D-013 Indicatiebesluit'],   x:60,  y:470 },
+      { id:'gpk-n8', type:'end',      name:'Besluit (Route A)',     sub:'Registratiedatum besluit',     defs:['D-013 Indicatiebesluit'],   x:390, y:560 },
+      { id:'gpk-n9', type:'end',      name:'Product besteld',       sub:'Besteldatum',                  defs:[],                           x:220, y:660 },
+    ],
+    edges: [
+      { from:'gpk-n1', to:'gpk-n2', label:'' },
+      { from:'gpk-n2', to:'gpk-n3', label:'' },
+      { from:'gpk-n3', to:'gpk-n4', label:'Nee' },
+      { from:'gpk-n3', to:'gpk-n5', label:'Ja' },
+      { from:'gpk-n5', to:'gpk-n6', label:'' },
+      { from:'gpk-n4', to:'gpk-n7', label:'' },
+      { from:'gpk-n6', to:'gpk-n8', label:'' },
+      { from:'gpk-n7', to:'gpk-n9', label:'' },
+      { from:'gpk-n8', to:'gpk-n9', label:'' },
+    ]
+  };
+}
+
+function saveProcesses() {
+  // Also save current name from input
+  if (currentProcId) {
+    const p = processes.find(x => x.id === currentProcId);
+    if (p) p.name = document.getElementById('proc-name-input').value || 'Naamloos proces';
+  }
+  try { localStorage.setItem(PROC_KEY, JSON.stringify(processes)); } catch(e) {}
+}
+
+function newProcId() {
+  return 'proc-' + Date.now();
+}
+
+function newNodeId() {
+  return 'n' + (++nodeIdCounter) + '-' + Date.now();
+}
+
+// ── Library ───────────────────────────────────────────────────────
+function renderProcLibrary() {
+  procShowLibrary();
+  const grid = document.getElementById('proc-grid');
+  grid.innerHTML = processes.map(p => {
+    const nodeCount = (p.nodes||[]).length;
+    const linkedDefs = [];
+    (p.nodes||[]).forEach(n => (n.defs||[]).forEach(d => { if(!linkedDefs.includes(d)) linkedDefs.push(d); }));
+    const tags = linkedDefs.slice(0,3).map(d => `<span class="proc-card-tag">${d}</span>`).join('');
+    return `<div class="proc-card" onclick="openProcess('${p.id}')">
+      <div class="proc-card-title">${p.name || 'Naamloos'}</div>
+      <div class="proc-card-meta">${nodeCount} stap${nodeCount !== 1 ? 'pen' : ''}</div>
+      ${tags ? `<div class="proc-card-tags">${tags}</div>` : ''}
+    </div>`;
+  }).join('') + `<div class="proc-card proc-card-new" onclick="createProcess()">
+      <div class="proc-card-new-icon">+</div>
+      <div class="proc-card-new-lbl">Nieuw proces</div>
+    </div>`;
+}
+
+function createProcess() {
+  const p = { id: newProcId(), name: 'Nieuw proces', nodes: [], edges: [] };
+  processes.push(p);
+  saveProcesses();
+  openProcess(p.id);
+}
+
+function openProcess(id) {
+  currentProcId = id;
+  selectedNodeId = null;
+  connectMode = false;
+  connectFrom = null;
+  const p = processes.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('proc-name-input').value = p.name || '';
+  procShowEditor();
+  rebuildDefPicker();
+  renderCanvas();
+  showNodeDetail(null);
+}
+
+function deleteCurrentProcess() {
+  if (!currentProcId) return;
+  const p = processes.find(x => x.id === currentProcId);
+  if (!confirm(`Proces "${p?.name || ''}" verwijderen?`)) return;
+  processes = processes.filter(x => x.id !== currentProcId);
+  saveProcesses();
+  renderProcLibrary();
+}
+
+function procShowLibrary() {
+  document.getElementById('proc-library').style.display = 'block';
+  document.getElementById('proc-editor').style.display = 'none';
+  document.getElementById('proc-editor').classList.remove('active');
+}
+
+function procShowEditor() {
+  document.getElementById('proc-library').style.display = 'none';
+  document.getElementById('proc-editor').style.display = 'flex';
+  document.getElementById('proc-editor').classList.add('active');
+}
+
+// ── Canvas rendering ──────────────────────────────────────────────
+function currentProc() { return processes.find(x => x.id === currentProcId); }
+
+function renderCanvas() {
+  const p = currentProc(); if (!p) return;
+  const canvas = document.getElementById('proc-canvas');
+  const hint = document.getElementById('canvas-hint');
+  hint.style.display = p.nodes.length ? 'none' : 'flex';
+
+  // Render nodes
+  canvas.innerHTML = '';
+  p.nodes.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'cn type-' + n.type + (n.id === selectedNodeId ? ' selected' : '');
+    el.id = 'cn-' + n.id;
+    el.style.left = n.x + 'px';
+    el.style.top  = n.y + 'px';
+    el.innerHTML = `<span>${escHtml(n.name || '…')}</span>` +
+      (n.sub ? `<span class="cn-sub">${escHtml(n.sub)}</span>` : '') +
+      (n.defs && n.defs.length ? `<span class="cn-sub" style="color:inherit;opacity:.7;">📎 ${n.defs.slice(0,2).join(', ')}${n.defs.length>2?'…':''}</span>` : '') +
+      `<div class="cn-link-dot bottom" data-dir="bottom" data-id="${n.id}"></div>
+       <div class="cn-link-dot top"    data-dir="top"    data-id="${n.id}"></div>
+       <div class="cn-link-dot right"  data-dir="right"  data-id="${n.id}"></div>
+       <div class="cn-link-dot left"   data-dir="left"   data-id="${n.id}"></div>`;
+
+    // Drag
+    el.addEventListener('mousedown', ev => {
+      if (ev.target.classList.contains('cn-link-dot')) return;
+      if (connectMode) { handleConnectClick(n.id); ev.preventDefault(); return; }
+      selectNode(n.id);
+      const startX = ev.clientX - n.x;
+      const startY = ev.clientY - n.y;
+      function onMove(e) {
+        n.x = Math.max(0, e.clientX - startX);
+        n.y = Math.max(0, e.clientY - startY);
+        el.style.left = n.x + 'px';
+        el.style.top  = n.y + 'px';
+        renderEdges();
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        saveProcesses();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      ev.preventDefault();
+    });
+
+    // Connection dot click
+    el.querySelectorAll('.cn-link-dot').forEach(dot => {
+      dot.addEventListener('mousedown', ev => {
+        ev.stopPropagation();
+        if (!connectMode) { toggleConnectMode(); }
+        handleConnectClick(n.id);
+      });
+    });
+
+    canvas.appendChild(el);
+  });
+
+  renderEdges();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderEdges() {
+  const p = currentProc(); if (!p) return;
+  const svg = document.getElementById('proc-svg');
+  // Remove old edges
+  svg.querySelectorAll('.proc-edge,.proc-edge-label,.proc-edge-hit').forEach(e => e.remove());
+
+  p.edges.forEach((e, ei) => {
+    const fromEl = document.getElementById('cn-' + e.from);
+    const toEl   = document.getElementById('cn-' + e.to);
+    if (!fromEl || !toEl) return;
+
+    const fr = fromEl.getBoundingClientRect();
+    const tr = toEl.getBoundingClientRect();
+    const wrap = document.getElementById('proc-canvas-wrap').getBoundingClientRect();
+
+    // Center of each node relative to wrap
+    const fx = fr.left - wrap.left + fr.width/2;
+    const fy = fr.top  - wrap.top  + fr.height/2;
+    const tx = tr.left - wrap.left + tr.width/2;
+    const ty = tr.top  - wrap.top  + tr.height/2;
+
+    // Exit point bottom of from, entry point top of to (with fallback)
+    const x1 = fx, y1 = fr.bottom - wrap.top;
+    const x2 = tx, y2 = tr.top    - wrap.top;
+
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('class','proc-edge');
+    path.setAttribute('d', `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`);
+    path.setAttribute('marker-end','url(#proc-arrow)');
+    svg.appendChild(path);
+
+    // Hit area for deletion
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','path');
+    hit.setAttribute('class','proc-edge-hit');
+    hit.setAttribute('d', `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`);
+    hit.setAttribute('pointer-events','all');
+    hit.title = 'Klik om te verwijderen';
+    hit.style.cursor = 'pointer';
+    hit.addEventListener('click', () => {
+      if (confirm('Verbinding verwijderen?')) {
+        p.edges.splice(ei, 1);
+        saveProcesses();
+        renderCanvas();
+      }
+    });
+    svg.appendChild(hit);
+
+    // Label
+    if (e.label) {
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('class','proc-edge-label');
+      txt.setAttribute('x', mx); txt.setAttribute('y', my - 4);
+      txt.setAttribute('text-anchor','middle');
+      txt.textContent = e.label;
+      svg.appendChild(txt);
+    }
+  });
+}
+
+// ── Node management ───────────────────────────────────────────────
+function addNode(type) {
+  const p = currentProc(); if (!p) return;
+  const wrap = document.getElementById('proc-canvas-wrap');
+  const existing = p.nodes.length;
+  const id = newNodeId();
+  const names = { start:'Start', step:'Stap', decision:'Beslissing', action:'Actie', end:'Einde' };
+  p.nodes.push({
+    id, type,
+    name: names[type] || 'Stap',
+    sub: '', defs: [],
+    x: 60 + (existing % 3) * 180,
+    y: 60 + Math.floor(existing / 3) * 120
+  });
+  saveProcesses();
+  renderCanvas();
+  selectNode(id);
+}
+
+function selectNode(id) {
+  selectedNodeId = id;
+  document.querySelectorAll('.cn').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('cn-' + id);
+  if (el) el.classList.add('selected');
+  showNodeDetail(id);
+}
+
+function showNodeDetail(id) {
+  const hint = document.getElementById('nd-hint');
+  const detail = document.getElementById('node-detail');
+  if (!id) {
+    hint.style.display = 'block'; detail.classList.remove('active'); return;
+  }
+  const p = currentProc(); if (!p) return;
+  const n = p.nodes.find(x => x.id === id);
+  if (!n) { hint.style.display = 'block'; detail.classList.remove('active'); return; }
+
+  hint.style.display = 'none';
+  detail.classList.add('active');
+  document.getElementById('nd-name').value = n.name || '';
+  document.getElementById('nd-sub').value  = n.sub  || '';
+  // Clear def search
+  const ds = document.getElementById('nd-def-search');
+  const dr = document.getElementById('nd-def-results');
+  if (ds) ds.value = '';
+  if (dr) dr.style.display = 'none';
+
+  // Linked defs
+  renderLinkedDefs(n);
+
+  // Connections from this node
+  const connDiv = document.getElementById('nd-connections');
+  const myEdges = p.edges.filter(e => e.from === id || e.to === id);
+  if (myEdges.length) {
+    connDiv.innerHTML = myEdges.map((e, i) => {
+      const other = e.from === id ? e.to : e.from;
+      const on = p.nodes.find(x => x.id === other);
+      const dir = e.from === id ? '→' : '←';
+      return `<div class="nd-conn-row">
+        <span>${dir} ${escHtml(on?.name || '?')}</span>
+        <button class="btn-del-conn" onclick="deleteEdge('${e.from}','${e.to}')">×</button>
+      </div>`;
+    }).join('');
+  } else {
+    connDiv.innerHTML = '<span style="font-size:.62rem;color:var(--bd);">Geen verbindingen</span>';
+  }
+}
+
+function renderLinkedDefs(n) {
+  const div = document.getElementById('nd-defs');
+  div.innerHTML = (n.defs||[]).map(d =>
+    `<span class="linked-def-chip">${escHtml(d)} <button onclick="unlinkDef('${n.id}','${escHtml(d).replace(/'/g,"\\'")}')">×</button></span>`
+  ).join('');
+}
+
+function updateSelectedNode() {
+  const p = currentProc(); if (!p || !selectedNodeId) return;
+  const n = p.nodes.find(x => x.id === selectedNodeId); if (!n) return;
+  n.name = document.getElementById('nd-name').value;
+  n.sub  = document.getElementById('nd-sub').value;
+  // Update node on canvas without full re-render
+  const el = document.getElementById('cn-' + selectedNodeId);
+  if (el) {
+    el.querySelector('span').textContent = n.name || '…';
+  }
+  saveProcesses();
+}
+
+function deleteSelectedNode() {
+  const p = currentProc(); if (!p || !selectedNodeId) return;
+  const n = p.nodes.find(x => x.id === selectedNodeId);
+  if (!confirm(`Stap "${n?.name || ''}" verwijderen?`)) return;
+  p.nodes = p.nodes.filter(x => x.id !== selectedNodeId);
+  p.edges = p.edges.filter(e => e.from !== selectedNodeId && e.to !== selectedNodeId);
+  selectedNodeId = null;
+  saveProcesses();
+  renderCanvas();
+  showNodeDetail(null);
+}
+
+function deleteEdge(from, to) {
+  const p = currentProc(); if (!p) return;
+  p.edges = p.edges.filter(e => !(e.from === from && e.to === to));
+  saveProcesses();
+  renderCanvas();
+  showNodeDetail(selectedNodeId);
+}
+
+// ── Connect mode ──────────────────────────────────────────────────
+function toggleConnectMode() {
+  connectMode = !connectMode;
+  connectFrom = null;
+  const btn = document.getElementById('btn-connect-mode');
+  const hint = document.getElementById('connect-hint');
+  if (connectMode) {
+    btn.style.background = 'var(--s)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--s)';
+    hint.textContent = 'Klik nu op stap A…';
+  } else {
+    btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
+    hint.textContent = 'Klik op "Verbinden", dan op stap A, dan op stap B.';
+  }
+}
+
+function handleConnectClick(nodeId) {
+  const p = currentProc(); if (!p) return;
+  if (!connectFrom) {
+    connectFrom = nodeId;
+    document.getElementById('cn-' + nodeId).style.outline = '2px dashed var(--zb)';
+    document.getElementById('connect-hint').textContent = 'Goed! Klik nu op stap B…';
+  } else {
+    if (connectFrom === nodeId) {
+      // Deselect
+      document.getElementById('cn-' + nodeId).style.outline = '';
+      connectFrom = null;
+      document.getElementById('connect-hint').textContent = 'Klik op stap A…';
+      return;
+    }
+    // Check duplicate
+    const exists = p.edges.find(e => e.from === connectFrom && e.to === nodeId);
+    if (!exists) {
+      p.edges.push({ from: connectFrom, to: nodeId, label: '' });
+      saveProcesses();
+    }
+    document.getElementById('cn-' + connectFrom).style.outline = '';
+    connectFrom = null;
+    toggleConnectMode();
+    renderCanvas();
+    if (selectedNodeId) showNodeDetail(selectedNodeId);
+  }
+}
+
+// ── Def search picker ─────────────────────────────────────────────
+function rebuildDefPicker() {
+  // Nothing to pre-build — search is live
+  filterDefPicker('');
+}
+
+function filterDefPicker(q) {
+  const resultsEl = document.getElementById('nd-def-results');
+  if (!resultsEl) return;
+  const term = q.trim().toLowerCase();
+
+  // Get already-linked defs for current node
+  const p = currentProc();
+  const n = p && selectedNodeId ? p.nodes.find(x => x.id === selectedNodeId) : null;
+  const linked = n ? (n.defs || []) : [];
+
+  const filtered = entries.filter(e => {
+    if (!term) return true;
+    return (e.id + ' ' + e.term).toLowerCase().includes(term);
+  }).slice(0, 20); // cap at 20 results
+
+  if (!term && filtered.length === 0) {
+    resultsEl.style.display = 'none';
+    return;
+  }
+
+  resultsEl.style.display = 'block';
+
+  if (filtered.length === 0) {
+    resultsEl.innerHTML = '<div class="def-result-empty">Geen definities gevonden</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = filtered.map(e => {
+    const label = e.id + ' ' + e.term;
+    const alreadyLinked = linked.includes(label);
+    return `<div class="def-result-item${alreadyLinked ? '" style="opacity:.45;pointer-events:none;' : '"'} onclick="linkDef('${escHtml(label).replace(/'/g,"\\'")}');document.getElementById('nd-def-search').value='';document.getElementById('nd-def-results').style.display='none';">
+      <span class="def-id">${e.id}</span>${escHtml(e.term)}${alreadyLinked ? ' ✓' : ''}
+    </div>`;
+  }).join('');
+}
+
+// Hide results when clicking outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('nd-def-results');
+  const inp  = document.getElementById('nd-def-search');
+  if (wrap && inp && !wrap.contains(e.target) && e.target !== inp) {
+    wrap.style.display = 'none';
+  }
+});
+
+
+function linkDef(val) {
+  if (!val || !selectedNodeId) return;
+  const p = currentProc(); if (!p) return;
+  const n = p.nodes.find(x => x.id === selectedNodeId); if (!n) return;
+  if (!n.defs) n.defs = [];
+  const label = val.split(' ').slice(0,1)[0] + ' ' + val.split(' ').slice(1).join(' ');
+  if (!n.defs.includes(label)) n.defs.push(label);
+  saveProcesses();
+  renderLinkedDefs(n);
+  renderCanvas();
+}
+
+function unlinkDef(nodeId, def) {
+  const p = currentProc(); if (!p) return;
+  const n = p.nodes.find(x => x.id === nodeId); if (!n) return;
+  n.defs = (n.defs||[]).filter(d => d !== def);
+  saveProcesses();
+  renderLinkedDefs(n);
+  renderCanvas();
+}
+
+// Load processes on start
+loadProcesses();
 </script>
 </body>
 </html>
+
