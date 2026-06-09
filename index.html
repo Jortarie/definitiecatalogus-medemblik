@@ -398,6 +398,9 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
 .btn-excel{font-family:inherit;font-size:.7rem;font-weight:700;background:#1D6F42;color:#fff;border:none;border-radius:16px;padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;white-space:nowrap;}
 .btn-excel:hover{background:#155232;}
 .btn-excel svg{flex-shrink:0;}
+.btn-publish{font-family:inherit;font-size:.7rem;font-weight:700;background:var(--n);color:#fff;border:none;border-radius:16px;padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;white-space:nowrap;}
+.btn-publish:hover{background:#001a33;}
+.btn-publish svg{flex-shrink:0;}
 
 .btn-settings{font-family:inherit;font-size:.7rem;font-weight:700;background:var(--w);color:var(--sub);border:1.5px solid var(--bd);border-radius:16px;padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;}
 .btn-settings:hover{border-color:var(--s);color:var(--s);}
@@ -447,6 +450,10 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
   <button class="btn-excel" onclick="exportToExcel()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9 12 11"/></svg>
     Exporteer Excel
+  </button>
+  <button class="btn-publish" onclick="exportHTMLFile()" title="Download index.html met alle huidige data — upload naar GitHub om te publiceren">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Publiceer naar GitHub
   </button>
   <button class="btn-add" onclick="openNew()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1132,7 +1139,7 @@ const DEFAULT_DATA = [
   {id:"D-001",term:"Instroom",def:"",ctx:"",fields:"",cat:"In/Uitstroom",team:"Jeugd",status:"Vastgesteld",date:"01-01-2024",notes:""},
   {id:"D-002",term:"Uitstroom",def:"Het aantal cliënten dat binnen de gegeven periode stopt met het gebruiken van een dienst of product. Dit geldt voor zowel specialistische, als basisondersteuning.",ctx:"",fields:"",cat:"In/Uitstroom",team:"WMO & Backoffice",status:"Vastgesteld",date:"01-01-2024",notes:""},
   {id:"D-003",term:"Doorlooptijd",def:"",ctx:"",fields:"",cat:"WMO",team:"Contractbeheer & Inkoop",status:"Vastgesteld",date:"15-03-2024",notes:""},
-  {id:"D-004",term:"Uitstroommoment",def:"",ctx:"",fields:"",cat:"Jeugd",team:"Sociaal & Welzijn",status:"Concept",date:"—",notes:"Definitie in review bij wijkteams"},
+  {id:"D-004",term:"Uitstroommoment",def:"",ctx:"",fields:"",cat:"Jeugd",team:"Jeugd",status:"Concept",date:"—",notes:"Definitie in review bij wijkteams"},
   {id:"D-005",term:"Toewijzing Jeugd",def:"Wonen in een accommodatie van een instelling met daarbij behorende toezicht en begeleiding, gericht op herstel en re-integratie in de samenleving.",ctx:"Specifieke WMO-voorziening voor mensen met psychische problematiek; aparte financieringsstromen en verantwoording.",fields:"Instelling, capaciteitstype, indicatiebesluit, verblijfsduur, financieringsvorm",cat:"WMO",team:"WMO & Backoffice",status:"Vastgesteld",date:"01-06-2023",notes:""},
   {id:"D-006",term:"Doorlooptijd Jeugd",def:"Het vermogen van een persoon en diens sociale netwerk om zelfstandig problemen op te lossen, zonder professionele ondersteuning.",ctx:"Uitgangspunt bij de keukentafelgesprekken en de afweging of een maatwerkvoorziening noodzakelijk is.",fields:"Vragenlijst eigen kracht, mantelzorgbeschikbaarheid, sociaal netwerkscore",cat:"Sociaal Domein",team:"Sociaal & Welzijn",status:"Vastgesteld",date:"01-09-2023",notes:""},
   {id:"D-007",term:"Enkelvoudige hulpvraag",def:"Een hulpvraag die betrekking heeft op één specifiek domein en waarvoor één type voorziening of interventie volstaat.",ctx:"Gebruikt bij triage in het toegangsproces om te bepalen welk loket of welk team de vraag oppakt.",fields:"Domeincode, vraagtype, toewijzend loket, datum melding",cat:"Toegang",team:"Sociaal & Welzijn",status:"Concept",date:"15-02-2024",notes:""},
@@ -1140,7 +1147,7 @@ const DEFAULT_DATA = [
   {id:"D-009",term:"Verwijzer",def:"Een persoon of organisatie die een burger doorverwijst naar jeugdhulp of WMO-ondersteuning, zoals een huisarts, rechter of wijkteam.",ctx:"Bepaalt de ingangsroute en heeft gevolgen voor de financiering en het bijbehorende registratieproces.",fields:"Verwijzertype, verwijzercode, organisatie, datum verwijzing, verwijsbrief aanwezig (J/N)",cat:"Jeugd",team:"Jeugd",status:"Vastgesteld",date:"01-01-2024",notes:""},
   {id:"D-010",term:"Verwijzer GI",def:"",ctx:"Gemeente mag de noodzaak tot jeugdhulp niet onderzoeken, dit bepaalt de GI. Gemeente geeft geen beschikking af.",fields:"Type verwijzer, Zaaktype",cat:"Jeugd",team:"Jeugd",status:"Vastgesteld",date:"01-03-2023",notes:""},
   {id:"D-011",term:"Zorg in natura (ZIN)",def:"Een voorziening waarbij de gemeente de zorg of ondersteuning rechtstreeks inkoopt bij een gecontracteerde aanbieder.",ctx:"Meest voorkomende leveringsvorm; aansturing via contracten en productcodes.",fields:"Leveringsvorm",cat:"WMO",team:"Contractbeheer & Inkoop",status:"Vastgesteld",date:"01-01-2024",notes:""},
-  {id:"D-012",term:"Keukentafelgesprek",def:"Een gesprek tussen een gemeentelijke consulent en de hulpvragende burger (en eventueel diens netwerk) om de ondersteuningsbehoefte in kaart te brengen.",ctx:"Startpunt van de formele WMO-procedure; gespreksverslag vormt basis voor het indicatiebesluit.",fields:"Datum gesprek, consulent-ID, aanwezigen, gespreksverslag, vervolgactie",cat:"WMO",team:"Sociaal & Welzijn",status:"Vastgesteld",date:"01-01-2024",notes:""},
+  {id:"D-012",term:"Keukentafelgesprek",def:"Een gesprek tussen een gemeentelijke consulent en de hulpvragende burger (en eventueel diens netwerk) om de ondersteuningsbehoefte in kaart te brengen.",ctx:"Startpunt van de formele WMO-procedure; gespreksverslag vormt basis voor het indicatiebesluit.",fields:"Datum gesprek, consulent-ID, aanwezigen, gespreksverslag, vervolgactie",cat:"WMO",team:"Jeugd",status:"Vastgesteld",date:"01-01-2024",notes:""},
   {id:"D-013",term:"Indicatiebesluit",def:"Een formeel besluit van de gemeente waarin wordt vastgelegd welke ondersteuning een cliënt ontvangt, voor welke periode en onder welke voorwaarden.",ctx:"Juridisch bindend document; basis voor de toewijzing aan een aanbieder en de bekostiging.",fields:"Besluitdatum, ingangsdatum, einddatum, productcode, volume, grondslag, bezwaartermijn",cat:"WMO",team:"WMO & Backoffice",status:"Vastgesteld",date:"01-01-2024",notes:""},
   {id:"D-014",term:"Sociale basis",def:"Het geheel van algemene, vrij toegankelijke voorzieningen en activiteiten in de wijk die bijdragen aan participatie en zelfredzaamheid.",ctx:"Wordt ingezet vóór of naast maatwerkvoorzieningen; relevant voor de monitor preventie.",fields:"Voorzieningtype, locatie, doelgroep, capaciteit, subsidie J/N",cat:"Sociaal Domein",team:"WMO & Backoffice",status:"Concept",date:"—",notes:""},
   {id:"D-015",term:"Uitstroom (traject)",def:"Het beëindigen van een zorg- of ondersteuningstraject, al dan niet na het bereiken van de doelstelling.",ctx:"Kernmaat voor effectiviteitsmeting; reden van uitstroom bepaalt de kwalificatie (positief/negatief).",fields:"Einddatum, reden uitstroom, doelrealisatie (J/N), doorstroom naar andere voorziening",cat:"Sociaal Domein",team:"Jeugd",status:"Vastgesteld",date:"15-05-2024",notes:""},
@@ -3137,7 +3144,63 @@ document.getElementById('catModal').addEventListener('click', function(e) {
 // Footer date
 document.getElementById('ftrDate').textContent = 'Bijgewerkt op ' + new Date().toLocaleDateString('nl-NL', {day:'2-digit',month:'long',year:'numeric'});
 
-// ── Init ──────────────────────────────────────────────────────────
+// ── Publiceer naar GitHub: exporteer index.html met live data ────
+function exportHTMLFile() {
+  // 1. Haal live data op uit localStorage (of huidig geheugen als fallback)
+  const liveEntries   = JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(entries));
+  const liveProcs     = JSON.parse(localStorage.getItem(PROC_KEY)    || JSON.stringify(processes));
+  const liveCats      = JSON.parse(localStorage.getItem(CAT_KEY)     || JSON.stringify(categories));
+  const liveTeams     = JSON.parse(localStorage.getItem(TEAM_KEY)    || JSON.stringify(teams));
+  const liveStatuses  = JSON.parse(localStorage.getItem(STATUS_KEY)  || JSON.stringify(statuses));
+  const liveProcCats  = JSON.parse(localStorage.getItem(PROC_CAT_KEY)|| JSON.stringify(procCats));
+  const liveDvCats    = JSON.parse(localStorage.getItem(DV_CAT_KEY)  || JSON.stringify(dvCats));
+  const liveDvEntries = JSON.parse(localStorage.getItem(DV_KEY)      || JSON.stringify(dvEntries));
+
+  // 2. Haal de huidige HTML op als tekst
+  const currentHTML = document.documentElement.outerHTML;
+
+  // 3. Helper: vervang een JS-constante in de HTML
+  function replaceConst(html, constName, newValue) {
+    // Matcht: const NAME = [...]; of const NAME = "..."; etc.
+    const re = new RegExp(
+      '(const\\s+' + constName + '\\s*=\\s*)' +
+      '(\\[[\\s\\S]*?\\]|\\{[\\s\\S]*?\\}|"[^"]*"|\'[^\']*\')' +
+      '(\\s*;)',
+      'g'
+    );
+    const json = JSON.stringify(newValue, null, 2);
+    return html.replace(re, '$1' + json + '$3');
+  }
+
+  // 4. Vervang alle DEFAULT_ constanten met live data
+  let html = currentHTML;
+  html = replaceConst(html, 'DEFAULT_DATA',     liveEntries);
+  html = replaceConst(html, 'DEFAULT_CATS',     liveCats);
+  html = replaceConst(html, 'DEFAULT_TEAMS',    liveTeams);
+  html = replaceConst(html, 'DEFAULT_STATUSES', liveStatuses);
+  html = replaceConst(html, 'DEFAULT_PROC_CATS',liveProcCats);
+  html = replaceConst(html, 'DEFAULT_DV_CATS',  liveDvCats);
+  html = replaceConst(html, 'DV_DEFAULT',        liveDvEntries);
+
+  // 5. Vervang de standaard processenbibliotheek met live processen
+  // GPK_DEFAULT_PROCESS() aanroep in loadProcesses vervangen door volledige lijst
+  const procsJson = JSON.stringify(liveProcs, null, 2);
+  html = html.replace(
+    /processes\s*=\s*\[[\s\S]*?GPK_DEFAULT_PROCESS\(\)[\s\S]*?\];/,
+    'processes = ' + procsJson + ';'
+  );
+
+  // 6. Download als index.html
+  const blob = new Blob(['<!DOCTYPE html>\n' + html.replace(/^<!DOCTYPE[^>]*>\n?/, '')], {type: 'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'index.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
 loadMeta();
 loadData();
 rebuildCatDropdowns();
