@@ -1,0 +1,2617 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Definitiecatalogus — Sociaal Domein | Gemeente Medemblik</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Aanvullingen specifiek voor de Sheets-gevoede herbouw — bewust
+     los van style.css gehouden zodat dat bestand 1-op-1 het origineel
+     blijft. Alleen wat hier nodig is voor de placeholder-tabs en de
+     data-issue-banner. */
+  .placeholder-view{display:none;flex:1 1 0;min-height:0;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:40px;position:relative;overflow:hidden;}
+  .placeholder-view.active{display:flex;}
+  .placeholder-icon{opacity:.18;}
+  .placeholder-title{font-size:1.05rem;font-weight:700;color:var(--n);}
+  .placeholder-sub{font-size:.78rem;color:var(--sub);max-width:380px;line-height:1.6;}
+  .placeholder-badge{font-size:.62rem;font-weight:700;background:rgba(243,156,18,.13);color:#B7770D;border:1px solid rgba(243,156,18,.3);border-radius:10px;padding:3px 10px;}
+
+  #dataIssueBanner{display:none;background:#FAEEDA;color:#854F0B;border-bottom:1px solid #F0C36D;padding:8px 18px;font-size:.72rem;flex:0 0 auto;}
+  #dataIssueBanner a{color:#854F0B;text-decoration:underline;cursor:pointer;}
+
+  .loading-row td{color:var(--sub);font-size:.72rem;font-style:italic;padding:14px 12px;}
+
+  /* fields/values met letterlijke regeleindes leesbaar tonen */
+  .pre-wrap{white-space:pre-wrap;}
+
+  /* Optionele afbeelding bij een definitie — komt boven de
+     wijzigingshistorie te staan, alleen zichtbaar als er een
+     geldige URL in de "Afbeelding"-kolom van het Sheet staat. */
+  .detail-image-wrap{border-radius:12px;overflow:hidden;border:1px solid var(--bd);background:var(--lg);}
+  .detail-image-wrap img{display:block;width:100%;max-height:320px;object-fit:contain;background:var(--w);}
+
+  /* Dashboard detail-popup — groot, in het midden, zelfde visuele taal
+     als de bestaande .modal-overlay/.modal maar breder/hoger omdat dit
+     de hoofdweergave van een dashboard is, niet een klein formuliertje. */
+  .dash-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,46,86,.55);z-index:300;align-items:center;justify-content:center;padding:24px;}
+  .dash-modal-overlay.open{display:flex;}
+  .dash-modal{background:var(--w);border-radius:16px;width:min(720px, 92vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,46,86,.25);overflow:hidden;}
+  .dash-modal-hdr{padding:22px 26px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-shrink:0;}
+  .dash-modal-title{font-size:1.15rem;font-weight:800;color:var(--n);line-height:1.25;}
+  .proc-modal-sub{font-size:.68rem;color:var(--sub);margin-top:3px;font-weight:600;}
+  .dash-modal-close{border:1.5px solid var(--bd);background:var(--w);border-radius:8px;padding:7px;cursor:pointer;color:var(--sub);display:flex;flex-shrink:0;transition:all .15s;}
+  .dash-modal-close:hover{border-color:#E24B4A;color:#E24B4A;}
+  .dash-modal-body{flex:1;overflow-y:auto;min-height:0;padding:22px 26px;display:flex;flex-direction:column;gap:18px;}
+  .dash-modal-body::-webkit-scrollbar{width:4px;}
+  .dash-modal-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+  .dash-modal-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--lg);border-radius:12px;padding:16px 18px;}
+
+  /* Kringen-achtergrond — overgenomen uit de oorspronkelijke app
+     (Vraagsteller-view), nu ook gebruikt voor Processen. */
+  .kringen-bg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;}
+
+  /* Processen — lijst+detail layout (geen popup meer: het geselecteerde
+     proces wordt getoond in een vast paneel naast de lijst, net als bij
+     Definities/Datavelden/Dashboards). */
+  .proc-view{display:none;flex:1 1 0;min-height:0;position:relative;overflow:hidden;}
+  .proc-view.active{display:flex;flex-direction:column;}
+  .proc-content{position:relative;z-index:1;flex:1;min-height:0;padding:24px 28px 28px;display:flex;flex-direction:column;gap:14px;}
+  .proc-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:0 0 auto;}
+  .proc-main{flex:1;min-height:0;display:flex;gap:16px;}
+
+  .proc-list-panel{flex:0 0 300px;max-width:300px;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 4px 2px 0;}
+  .proc-list-panel::-webkit-scrollbar{width:4px;}
+  .proc-list-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.35);border-radius:2px;}
+
+  .proc-card{background:rgba(255,255,255,.98);border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .12s, box-shadow .12s, border-color .12s;box-shadow:0 2px 8px rgba(0,46,86,.10);border:2px solid transparent;}
+  .proc-card:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,46,86,.18);}
+  .proc-card.selected{border-color:#005496;box-shadow:0 6px 18px rgba(0,84,150,.22);}
+  .proc-card-name{font-weight:800;color:var(--n);font-size:.86rem;margin-bottom:3px;}
+  .proc-card-desc{font-size:.72rem;color:var(--sub);line-height:1.45;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .proc-card-foot{display:flex;align-items:center;justify-content:space-between;font-size:.66rem;color:var(--sub);gap:6px;}
+  .proc-card-steps{background:var(--lg);color:var(--n);font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap;}
+
+  .proc-detail-panel{flex:1 1 0;min-width:0;min-height:0;background:rgba(255,255,255,.98);border-radius:14px;box-shadow:0 2px 10px rgba(0,46,86,.12);display:flex;flex-direction:column;overflow-y:auto;padding:22px 26px 30px;}
+  .proc-detail-panel::-webkit-scrollbar{width:4px;}
+  .proc-detail-panel::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+  .proc-detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--sub);text-align:center;padding:40px;}
+  .proc-detail-empty p{font-weight:700;color:var(--n);margin:0;font-size:.9rem;}
+  .proc-detail-header{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
+
+  .proc-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.72rem;color:var(--sub);padding:10px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);}
+  .proc-legend span{display:flex;align-items:center;gap:6px;}
+  .proc-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+
+  /* Type-badge op proceskaarten (Normaal / MensCentraal) */
+  .proc-type-badge{font-size:.56rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:8px;padding:2px 8px;white-space:nowrap;flex-shrink:0;background:var(--lg);color:var(--sub);border:1px solid var(--bd);}
+  .proc-type-badge.mc{background:#E6F1FB;color:#185FA5;border-color:#B5D4F4;}
+
+  /* Dashboards: direct-open-icoon in de tabel + prominente knop in de modal */
+  .dash-row-open{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;color:var(--sub);border:1.5px solid var(--bd);background:#fff;transition:all .12s;}
+  .dash-row-open:hover{color:#005496;border-color:#005496;background:#E6F1FB;}
+  .dash-cta{display:inline-flex;align-items:center;gap:8px;background:#005496;color:#fff;font:700 .78rem 'Plus Jakarta Sans',Arial,sans-serif;border-radius:10px;padding:11px 20px;text-decoration:none;transition:background .15s, transform .12s;align-self:flex-start;}
+  .dash-cta:hover{background:#003E70;transform:translateY(-1px);}
+  .dash-nolink{font-size:.7rem;color:var(--sub);font-style:italic;}
+
+  /* ── MensCentraal-proces: verticale fase-lijst met parallelle sporen ── */
+  .mc-container{display:flex;flex-direction:column;width:100%;max-width:1100px;margin:0 auto;}
+  .mc-toolbar{position:sticky;top:0;z-index:6;background:var(--w);display:flex;flex-direction:column;gap:8px;padding:2px 0 10px;border-bottom:1px solid var(--bd);margin-bottom:14px;}
+  .mc-jumpbar{display:flex;gap:6px;overflow-x:auto;min-width:0;padding-bottom:3px;}
+  .mc-jumpbar::-webkit-scrollbar{height:4px;}
+  .mc-jumpbar::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+  .mc-jump-pill{display:flex;align-items:center;gap:5px;font-size:.66rem;font-weight:700;color:var(--n);background:var(--lg);border:1px solid var(--bd);border-radius:999px;padding:4px 10px 4px 8px;white-space:nowrap;cursor:pointer;flex-shrink:0;transition:all .12s;}
+  .mc-jump-pill:hover{border-color:#005496;background:#E6F1FB;color:#005496;}
+  .mc-jump-pill i{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .mc-toolbar-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .mc-search-wrap{flex:1 1 200px;min-width:180px;display:flex;align-items:center;gap:7px;border:1.5px solid var(--bd);border-radius:8px;padding:5px 10px;color:var(--sub);background:#fff;transition:border-color .15s;}
+  .mc-search-wrap:focus-within{border-color:#005496;color:#005496;}
+  .mc-search-wrap input{flex:1;min-width:0;border:none;outline:none;font:600 .78rem 'Plus Jakarta Sans',Arial,sans-serif;color:var(--n);background:transparent;}
+  .mc-search-count{font-size:.66rem;font-weight:700;color:#005496;white-space:nowrap;}
+  .mc-toolbar-actions{display:flex;gap:6px;flex-shrink:0;}
+  .mc-toolbtn{font-size:.66rem;padding:6px 12px;font-weight:700;border:1.5px solid var(--bd);background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--sub);white-space:nowrap;transition:all .12s;}
+  .mc-toolbtn:hover{border-color:#005496;color:#005496;}
+  .mc-flow{display:flex;flex-direction:column;width:100%;}
+  .mc-fase{display:flex;align-items:stretch;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,46,86,.10);cursor:pointer;transition:box-shadow .15s,opacity .15s;scroll-margin-top:110px;}
+  .mc-fase:hover{box-shadow:0 3px 12px rgba(0,46,86,.18);}
+  .mc-fase-opt .mc-fase-hdr{background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 8px, transparent 8px 16px);}
+  .mc-fase-dim{opacity:.38;}
+  .mc-fase-tag{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;width:19px;min-width:19px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);}
+  .mc-fase-body{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .mc-fase-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px;}
+  .mc-fase-hdr-l{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;}
+  .mc-fase-hdr-r{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .mc-fase-nr{font-size:.64rem;font-weight:700;background:rgba(255,255,255,.22);border-radius:8px;padding:2px 8px;color:rgba(255,255,255,.92);white-space:nowrap;}
+  .mc-fase-naam{font-size:.95rem;font-weight:700;color:#fff;}
+  .mc-fase-naam mark.hl{background:rgba(255,255,255,.35);color:#fff;box-shadow:none;}
+  .mc-fase-optbadge{font-size:.62rem;font-weight:700;background:rgba(255,255,255,.18);border:1px dashed rgba(255,255,255,.5);border-radius:8px;padding:1px 7px;color:rgba(255,255,255,.9);}
+  .mc-fase-count{font-size:.66rem;font-weight:700;background:rgba(255,255,255,.18);border-radius:8px;padding:2px 8px;color:rgba(255,255,255,.88);white-space:nowrap;}
+  .mc-fase-toggle-icon{font-size:.68rem;color:rgba(255,255,255,.85);width:14px;text-align:center;flex-shrink:0;}
+  .mc-mini{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 7px;border-radius:8px;font-size:.64rem;font-weight:800;border:1px solid;}
+  .mc-fase-data{background:var(--w);padding:12px 15px 13px;}
+  .mc-tags{display:flex;flex-wrap:wrap;gap:5px;}
+  .mc-tag{display:inline-block;padding:3px 10px;border-radius:9px;font-size:.74rem;font-weight:600;line-height:1.5;border:1px solid;}
+  .mc-tag-datum{background:#E1F5EE;color:#0B6E49;border-color:#9FE1CB;}
+  .mc-tag-keuze{background:#E6F1FB;color:#185FA5;border-color:#B5D4F4;}
+  .mc-tag-getal{background:#FFF0E6;color:#993C1D;border-color:#FAC775;}
+  .mc-tag-meer{background:var(--lg);color:var(--sub);border-color:var(--bd);font-weight:700;}
+  .mc-geen-vragen{font-size:.72rem;color:var(--sub);font-style:italic;}
+  .mc-paden{display:flex;flex-wrap:wrap;gap:5px;padding:8px 15px 10px;background:var(--w);border-top:1px solid rgba(0,0,0,.04);}
+  .mc-pad-pill{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 9px;border-radius:8px;border:1.5px solid var(--bd);color:var(--sub);background:#fff;}
+  .mc-conn{display:flex;justify-content:center;align-items:center;height:16px;position:relative;flex-shrink:0;}
+  .mc-conn::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--bd);}
+  .mc-conn-sm{height:12px;}
+  .mc-arr{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--bd);position:relative;z-index:1;}
+
+  /* Parallelle sporen: kolommen naast elkaar met een splits-/samenvoeg-
+     lijn erboven en eronder (via ::before/::after op .mc-split). */
+  .mc-split{display:flex;gap:10px;align-items:flex-start;position:relative;padding:14px 0;overflow-x:auto;}
+  .mc-split::before,.mc-split::after{content:'';position:absolute;left:8%;right:8%;height:2px;background:var(--bd);border-radius:2px;}
+  .mc-split::before{top:6px;}
+  .mc-split::after{bottom:6px;}
+  .mc-lane{flex:1 1 0;min-width:280px;display:flex;flex-direction:column;}
+  .mc-lane-label{font-size:.64rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);background:var(--lg);border:1px solid var(--bd);border-radius:999px;padding:3px 11px;align-self:center;margin-bottom:8px;white-space:nowrap;}
+  .mc-lane-ghost{align-items:center;justify-content:flex-start;min-width:150px;flex:0.6 1 0;}
+  .mc-ghost-track{flex:1;width:2px;min-height:56px;background:repeating-linear-gradient(to bottom, var(--bd) 0 6px, transparent 6px 12px);display:flex;align-items:flex-end;justify-content:center;}
+  .mc-ghost-track .mc-arr{transform:translateY(6px);}
+  .mc-ghost-note{font-size:.66rem;color:var(--sub);font-style:italic;margin-top:8px;white-space:nowrap;}
+  /* Fase-kaarten binnen een spoor: iets compacter zodat 2-3 kolommen passen */
+  .mc-lane .mc-fase-naam{font-size:.84rem;}
+  .mc-lane .mc-fase-hdr{padding:7px 10px;flex-wrap:wrap;}
+  .mc-lane .mc-fase-tag{display:none;}
+  .mc-lane .mc-fase{width:100%;}
+
+  /* legenda-blokjes voor vraagtypen */
+  .proc-legend i.mc-tag-datum,.proc-legend i.mc-tag-keuze,.proc-legend i.mc-tag-getal{border:1px solid;}
+
+  /* Zoek-highlight: het gevonden tekstdeel licht op in lichtblauw */
+  mark.hl{background:#CDEBFA;color:inherit;padding:0 1px;border-radius:3px;box-shadow:0 0 0 1px #A9DBF5 inset;}
+
+  /* Klikbare dataveld-chips bij definities (en definitie-chips bij datavelden) */
+  .df-chip-link{cursor:pointer;transition:transform .12s, box-shadow .12s;}
+  .df-chip-link:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,46,86,.18);text-decoration:underline;}
+  .df-chip-link::after{content:' \2197';font-size:.85em;opacity:.6;}
+
+  /* Vernieuw-knop in de header (zichtbaar op elke tab) */
+  .hdr-refresh{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:8px;padding:6px 12px;font:600 .68rem 'Plus Jakarta Sans',Arial,sans-serif;cursor:pointer;transition:background .15s;}
+  .hdr-refresh:hover{background:rgba(255,255,255,.22);}
+
+  /* Schermformaten: laptop t/m groot beeldscherm (mobiel bewust buiten scope).
+     Op grote schermen krijgen de detailpanelen meer ademruimte, op een
+     laptop worden ze iets smaller zodat de tabel leesbaar blijft. */
+  @media (min-width:1600px){
+    .detail-panel{flex:0 0 540px !important;max-width:540px;}
+    .dv-detail-panel{flex:0 0 500px !important;max-width:500px;}
+    .dash-detail{flex:0 0 480px !important;}
+    .proc-list-panel{flex:0 0 340px !important;max-width:340px;}
+  }
+  @media (max-width:1280px){
+    .detail-panel{flex:0 0 360px !important;}
+    .dv-detail-panel{flex:0 0 340px !important;}
+    .dash-detail{flex:0 0 320px !important;}
+    .proc-list-panel{flex:0 0 260px !important;max-width:260px;}
+  }
+
+  /* ── Vraagsteller (klik-variant) ─────────────────────────────── */
+  .vq-grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px;align-items:start;}
+  @media (max-width:1100px){.vq-grid{grid-template-columns:1fr;}}
+  @media (min-width:1600px){.vq-grid{grid-template-columns:420px minmax(0,1fr);}}
+  .vq-panel{background:rgba(255,255,255,.98);border-radius:12px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,46,86,.12);}
+  .vq-step-label{font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);margin:16px 0 7px;display:flex;align-items:center;gap:7px;}
+  .vq-step-label:first-of-type{margin-top:0;}
+  .vq-step-nr{width:17px;height:17px;border-radius:50%;background:#005496;color:#fff;font-size:.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .vq-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .vq-chip{font-size:.7rem;font-weight:600;border:1.5px solid var(--bd);border-radius:999px;padding:4px 11px;cursor:pointer;color:var(--sub);background:#fff;transition:all .12s;user-select:none;}
+  .vq-chip:hover{border-color:#005496;color:#005496;}
+  .vq-chip.sel{background:#E6F1FB;border-color:#005496;color:#005496;}
+  .vq-begrip-list{max-height:280px;overflow-y:auto;border:1px solid var(--bd);border-radius:10px;margin-top:7px;}
+  .vq-begrip-list::-webkit-scrollbar{width:4px;}
+  .vq-begrip-list::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+  .vq-begrip-cat{font-size:.58rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);background:var(--lg);padding:5px 10px;position:sticky;top:0;z-index:1;}
+  .vq-begrip-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;font-size:.72rem;font-weight:600;color:var(--n);cursor:pointer;border-bottom:1px solid var(--lg);}
+  .vq-begrip-row:hover{background:var(--lg);}
+  .vq-begrip-row.sel{background:#E6F1FB;color:#005496;}
+  .vq-sentence{background:var(--lg);border-radius:10px;padding:13px 15px;font-size:.92rem;line-height:1.55;color:var(--n);display:flex;gap:12px;align-items:flex-start;}
+  .vq-sentence b{color:#005496;font-weight:800;}
+  .vq-copy-btn{display:flex;align-items:center;gap:6px;flex-shrink:0;border:1.5px solid var(--bd);background:#fff;border-radius:8px;padding:6px 12px;font:600 .68rem 'Plus Jakarta Sans',Arial,sans-serif;color:var(--n);cursor:pointer;transition:all .15s;}
+  .vq-copy-btn:hover{border-color:#005496;color:#005496;}
+  .vq-copy-btn.done{border-color:#1D9E75;color:#0B6E49;background:#E1F5EE;}
+  .vq-preview-note{font-size:.66rem;color:var(--sub);font-style:italic;margin:12px 0 6px;}
+  .vq-link-row{display:flex;align-items:center;gap:8px;font-size:.74rem;padding:8px 0;border-top:1px solid var(--lg);}
+  .vq-link-row:first-of-type{border-top:none;}
+  .vq-link-key{color:var(--sub);flex-shrink:0;min-width:88px;font-weight:600;font-size:.66rem;}
+  .vq-banner{display:flex;align-items:center;gap:9px;font-size:.72rem;font-weight:600;border-radius:10px;padding:9px 12px;margin-top:10px;}
+  .vq-banner.match{background:#E1F5EE;color:#0B6E49;}
+  .vq-banner.nomatch{background:var(--lg);color:var(--sub);font-weight:400;font-style:italic;}
+  .vq-banner .vq-banner-link{margin-left:auto;color:inherit;font-weight:800;cursor:pointer;text-decoration:underline;white-space:nowrap;}
+  .vq-hint{color:var(--sub);font-size:.78rem;font-style:italic;padding:44px 18px;text-align:center;line-height:1.7;}
+  .vq-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+  .vq-table th{text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);padding:6px 9px;border-bottom:1.5px solid var(--bd);}
+  .vq-table td{padding:5px 9px;border-bottom:1px solid var(--lg);color:var(--n);}
+  .vq-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .vq-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.66rem;color:var(--sub);margin-top:6px;}
+  .vq-legend span{display:flex;align-items:center;gap:5px;}
+  .vq-legend i{width:9px;height:9px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <img src="https://www.medemblik.nl/fileadmin/user_upload/medemblik-logo.svg" style="height:44px;filter:brightness(0) invert(1)" onerror="this.style.display='none'">
+    <div class="hdr-sep"></div>
+    <div>
+      <div class="t1" style="font-size:1rem;font-weight:700;letter-spacing:-.01em;">Definitiecatalogus — Sociaal Domein</div>
+      <div class="t2" style="font-size:.7rem;margin-top:2px;">Gegevenswoordenboek · Gemeente Medemblik</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="hdr-stat" id="hdrActiveCount">—</span>
+    <button class="hdr-refresh" id="btnRefreshSheets" onclick="loadAllData()" title="Haal de actuele data opnieuw op uit het Google Sheet">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
+      Vernieuw data
+    </button>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-nav-btn" id="navVraagsteller" onclick="switchMainTab('vraagsteller')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    Vraagsteller
+    <span class="tab-nav-new" style="background:rgba(29,158,117,.13);color:#0B6E49;border-color:rgba(29,158,117,.3);">nieuw</span>
+  </button>
+  <button class="tab-nav-btn active" id="navDefinities" onclick="switchMainTab('definities')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+    Definities
+  </button>
+  <button class="tab-nav-btn" id="navProcessen" onclick="switchMainTab('processen')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="M12 7v4M10.5 17.5L7 16M13.5 17.5L17 16"></path></svg>
+    Processen
+  </button>
+  <button class="tab-nav-btn" id="navDatavelden" onclick="switchMainTab('datavelden')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+    Datavelden
+  </button>
+  <button class="tab-nav-btn" id="navDashboards" onclick="switchMainTab('dashboards')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+    Dashboards
+  </button>
+</div>
+
+<div id="dataIssueBanner"></div>
+
+<!-- ============== DEFINITIES ============== -->
+<div id="view-definities" style="flex: 1 1 0px; min-height: 0px; display: flex; flex-direction: column;">
+  <div class="toolbar" style="display: flex;">
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Zoek op term, definitie, dataveld…" oninput="renderTable()" onchange="renderTable()">
+    </div>
+    <select class="fi-sel" id="filterCat" onchange="renderTable()"><option value="">Alle categorieën</option></select>
+    <select class="fi-sel" id="filterStatus" onchange="renderTable()"><option value="">Alle statussen</option></select>
+    <select class="fi-sel" id="filterTeam" onchange="renderTable()"><option value="">Alle teams</option></select>
+    <div class="tb-sep"></div>
+    <span class="dv-count" id="countLabel">— begrippen</span>
+  </div>
+  <div class="main">
+    <div class="tbl-panel">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Term</th>
+              <th style="width:90px;">Categorie</th>
+              <th style="width:90px;">Team</th>
+              <th style="width:80px;">Status</th>
+              <th style="width:64px;">Score</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr class="loading-row"><td colspan="6">Data wordt geladen uit Google Sheets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-empty" id="detailEmpty">
+        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+        <p>Selecteer een begrip om details te zien</p>
+        <span class="detail-empty-hint">Klik op een rij in de tabel aan de linkerkant</span>
+      </div>
+      <div id="detailContent" style="flex:1 1 0;display:none;flex-direction:column;min-height:0;">
+        <div class="detail-scroll">
+          <div class="detail-header">
+            <div style="flex:1;">
+              <div class="detail-id" id="dId"></div>
+              <div class="detail-term" id="dTerm"></div>
+              <div class="detail-badges">
+                <span id="dCatBadge"></span>
+                <span id="dStatusBadge"></span>
+              </div>
+            </div>
+          </div>
+          <div class="detail-section">
+            <div class="section-label">Definitie</div>
+            <div class="detail-text pre-wrap" id="dDef"></div>
+          </div>
+          <div class="detail-section" id="dCtxSection">
+            <div class="section-label">Business context</div>
+            <div class="detail-text pre-wrap" id="dCtx"></div>
+          </div>
+          <div class="detail-section" id="dFieldsSection">
+            <div class="section-label">Benodigde datavelden</div>
+            <div class="data-fields-wrap" id="dFields"></div>
+          </div>
+          <div class="detail-section" id="dFieldsFullSection">
+            <div class="section-label">Velden &amp; berekening</div>
+            <div class="detail-text pre-wrap" id="dFieldsFull"></div>
+          </div>
+          <div class="detail-section" id="dNotesSection">
+            <div class="section-label">Opmerkingen</div>
+            <div class="detail-text pre-wrap" id="dNotes"></div>
+          </div>
+          <div class="detail-meta">
+            <div class="meta-item">
+              <div class="meta-key">Verantwoordelijk team</div>
+              <div class="meta-val" id="dTeam"></div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Datum vastgesteld</div>
+              <div class="meta-val" id="dDate"></div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Categorie</div>
+              <div class="meta-val" id="dCat"></div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Status</div>
+              <div class="meta-val" id="dStatus"></div>
+            </div>
+          </div>
+          <div class="detail-section" id="dImageSection" style="display:none;">
+            <div class="section-label">Afbeelding</div>
+            <div class="detail-image-wrap">
+              <img id="dImage" src="" alt="" onerror="document.getElementById('dImageSection').style.display='none';">
+            </div>
+          </div>
+          <div class="changelog-wrap" id="dChangelogWrap">
+            <div class="changelog-label">Wijzigingshistorie</div>
+            <div class="changelog-list" id="dChangelog"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== PROCESSEN ============== -->
+<div id="view-processen" class="proc-view">
+  <svg class="kringen-bg" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="1400" height="900" fill="#002E56"/>
+    <g opacity="0.5">
+      <circle cx="1200" cy="780" r="40" fill="none" stroke="#16BECF" stroke-width="1.8"/>
+      <circle cx="1200" cy="780" r="80" fill="none" stroke="#16BECF" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="1200" cy="780" r="120" fill="none" stroke="#16BECF" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="1200" cy="780" r="160" fill="none" stroke="#16BECF" stroke-width="0.9" opacity="0.38"/>
+      <circle cx="1200" cy="780" r="200" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.22"/>
+      <clipPath id="cl1-proc"><circle cx="1200" cy="780" r="128"/></clipPath>
+      <g clip-path="url(#cl1-proc)" opacity="0.2" stroke="#16BECF" stroke-width="0.9">
+        <line x1="1050" y1="620" x2="1210" y2="940"/>
+        <line x1="1080" y1="620" x2="1240" y2="940"/>
+        <line x1="1110" y1="620" x2="1270" y2="940"/>
+        <line x1="1140" y1="620" x2="1300" y2="940"/>
+        <line x1="1170" y1="620" x2="1330" y2="940"/>
+      </g>
+    </g>
+    <g opacity="0.45">
+      <circle cx="120" cy="100" r="50" fill="none" stroke="#8DC63F" stroke-width="1.8"/>
+      <circle cx="120" cy="100" r="95" fill="none" stroke="#8DC63F" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="120" cy="100" r="140" fill="none" stroke="#8DC63F" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="120" cy="100" r="185" fill="none" stroke="#8DC63F" stroke-width="0.9" opacity="0.35"/>
+      <circle cx="120" cy="100" r="230" fill="none" stroke="#8DC63F" stroke-width="0.7" opacity="0.2"/>
+      <clipPath id="cl2-proc"><circle cx="120" cy="100" r="148"/></clipPath>
+      <g clip-path="url(#cl2-proc)" opacity="0.18" stroke="#8DC63F" stroke-width="0.9">
+        <line x1="-50" y1="-60" x2="110" y2="260"/>
+        <line x1="-20" y1="-60" x2="140" y2="260"/>
+        <line x1="10"  y1="-60" x2="170" y2="260"/>
+        <line x1="40"  y1="-60" x2="200" y2="260"/>
+        <line x1="70"  y1="-60" x2="230" y2="260"/>
+      </g>
+    </g>
+    <g opacity="0.28">
+      <circle cx="1350" cy="200" r="28" fill="none" stroke="#8DC63F" stroke-width="1.4"/>
+      <circle cx="1350" cy="200" r="55" fill="none" stroke="#8DC63F" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="1350" cy="200" r="82" fill="none" stroke="#8DC63F" stroke-width="0.8" opacity="0.45"/>
+    </g>
+    <g opacity="0.25">
+      <circle cx="80" cy="820" r="35" fill="none" stroke="#16BECF" stroke-width="1.3"/>
+      <circle cx="80" cy="820" r="65" fill="none" stroke="#16BECF" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="80" cy="820" r="95" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.45"/>
+    </g>
+  </svg>
+
+  <div class="proc-content">
+    <div class="proc-toolbar">
+      <div class="dv-search-wrap" style="background:rgba(255,255,255,.97);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="procSearch" placeholder="Zoek proces op naam, team…" oninput="renderProcList()">
+      </div>
+      <select class="dv-fi-sel" id="procFilterType" onchange="renderProcList()" style="background:rgba(255,255,255,.97);">
+        <option value="">Alle typen</option>
+        <option value="menscentraal">MensCentraal</option>
+        <option value="normaal">Normaal</option>
+      </select>
+      <select class="dv-fi-sel" id="procFilterTeam" onchange="renderProcList()" style="background:rgba(255,255,255,.97);"><option value="">Alle teams</option></select>
+      <span class="dv-count" id="procCountLabel" style="color:#fff;">— processen</span>
+    </div>
+    <div class="proc-main">
+      <div class="proc-list-panel" id="procList"></div>
+      <div class="proc-detail-panel" id="procDetailPanel">
+        <div class="proc-detail-empty" id="procDetailEmpty">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="M12 7v4M10.5 17.5L7 16M13.5 17.5L17 16"></path></svg>
+          <p>Selecteer een proces</p>
+          <span class="detail-empty-hint">Klik op een proces in de lijst hiernaast</span>
+        </div>
+        <div id="procDetailContent" style="display:none;flex:1;min-height:0;flex-direction:column;">
+          <div class="proc-detail-header">
+            <span class="bdg bdg-leeg" id="procDetailTeamBadge"></span>
+            <div class="dash-modal-title" id="procDetailTitle"></div>
+            <div class="proc-modal-sub" id="procDetailSub"></div>
+          </div>
+          <div class="detail-text" id="procDetailDesc"></div>
+          <div class="proc-legend" id="procDetailLegend"></div>
+          <div id="procFlowWrap" style="display:flex;justify-content:center;padding:8px 0;"></div>
+          <div id="procStepDetail"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== VRAAGSTELLER (placeholder) ============== -->
+<div id="view-vraagsteller" class="proc-view">
+  <svg class="kringen-bg" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="1400" height="900" fill="#002E56"/>
+    <g opacity="0.5">
+      <circle cx="1200" cy="780" r="40" fill="none" stroke="#16BECF" stroke-width="1.8"/>
+      <circle cx="1200" cy="780" r="80" fill="none" stroke="#16BECF" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="1200" cy="780" r="120" fill="none" stroke="#16BECF" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="1200" cy="780" r="160" fill="none" stroke="#16BECF" stroke-width="0.9" opacity="0.38"/>
+      <circle cx="1200" cy="780" r="200" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.22"/>
+      <clipPath id="cl1-vq"><circle cx="1200" cy="780" r="128"/></clipPath>
+      <g clip-path="url(#cl1-vq)" opacity="0.2" stroke="#16BECF" stroke-width="0.9">
+        <line x1="1050" y1="620" x2="1210" y2="940"/>
+        <line x1="1080" y1="620" x2="1240" y2="940"/>
+        <line x1="1110" y1="620" x2="1270" y2="940"/>
+        <line x1="1140" y1="620" x2="1300" y2="940"/>
+        <line x1="1170" y1="620" x2="1330" y2="940"/>
+      </g>
+    </g>
+    <g opacity="0.45">
+      <circle cx="120" cy="100" r="50" fill="none" stroke="#8DC63F" stroke-width="1.8"/>
+      <circle cx="120" cy="100" r="95" fill="none" stroke="#8DC63F" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="120" cy="100" r="140" fill="none" stroke="#8DC63F" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="120" cy="100" r="185" fill="none" stroke="#8DC63F" stroke-width="0.9" opacity="0.35"/>
+      <circle cx="120" cy="100" r="230" fill="none" stroke="#8DC63F" stroke-width="0.7" opacity="0.2"/>
+      <clipPath id="cl2-vq"><circle cx="120" cy="100" r="148"/></clipPath>
+      <g clip-path="url(#cl2-vq)" opacity="0.18" stroke="#8DC63F" stroke-width="0.9">
+        <line x1="-50" y1="-60" x2="110" y2="260"/>
+        <line x1="-20" y1="-60" x2="140" y2="260"/>
+        <line x1="10"  y1="-60" x2="170" y2="260"/>
+        <line x1="40"  y1="-60" x2="200" y2="260"/>
+        <line x1="70"  y1="-60" x2="230" y2="260"/>
+      </g>
+    </g>
+    <g opacity="0.28">
+      <circle cx="1350" cy="200" r="28" fill="none" stroke="#8DC63F" stroke-width="1.4"/>
+      <circle cx="1350" cy="200" r="55" fill="none" stroke="#8DC63F" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="1350" cy="200" r="82" fill="none" stroke="#8DC63F" stroke-width="0.8" opacity="0.45"/>
+    </g>
+    <g opacity="0.25">
+      <circle cx="80" cy="820" r="35" fill="none" stroke="#16BECF" stroke-width="1.3"/>
+      <circle cx="80" cy="820" r="65" fill="none" stroke="#16BECF" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="80" cy="820" r="95" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.45"/>
+    </g>
+  </svg>
+  <div class="proc-content">
+    <div>
+      <div style="font-weight:800;color:#fff;font-size:1.05rem;">Stel je datavraag samen</div>
+      <div style="color:rgba(255,255,255,.68);font-size:.76rem;max-width:660px;line-height:1.6;margin-top:4px;">Klik in vier stappen naar een scherpe datavraag. Rechts zie je meteen een voorbeeld van het antwoord (met fictieve getallen), de geldende definitie, de benodigde datavelden en of er al een dashboard bestaat dat dit toont.</div>
+    </div>
+    <div class="vq-grid">
+      <div class="vq-panel">
+        <div class="vq-step-label"><span class="vq-step-nr">1</span>Wat wil je weten?</div>
+        <div class="dv-search-wrap" style="width:100%;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="vqSearch" placeholder="Zoek een begrip…" oninput="renderVqBegripList()">
+        </div>
+        <div class="vq-begrip-list" id="vqBegripList"></div>
+        <div class="vq-step-label"><span class="vq-step-nr">2</span>Uitgesplitst naar</div>
+        <div class="vq-chips" id="vqDims"></div>
+        <div class="vq-step-label"><span class="vq-step-nr">3</span>Periode</div>
+        <div class="vq-chips" id="vqGran" style="margin-bottom:6px;"></div>
+        <div class="vq-chips" id="vqSpan"></div>
+        <div class="vq-step-label"><span class="vq-step-nr">4</span>Weergave</div>
+        <div class="vq-chips" id="vqView"></div>
+      </div>
+      <div class="vq-panel" id="vqPreview"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== DATAVELDEN ============== -->
+<div id="view-datavelden" class="dv-view">
+
+  <div class="dv-toolbar">
+    <div class="dv-search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="dvSearch" placeholder="Zoek op naam, brontabel, type…" oninput="renderDvTable()" onchange="renderDvTable()">
+    </div>
+    <select class="dv-fi-sel" id="dvFilterType" onchange="renderDvTable()"><option value="">Alle typen</option></select>
+    <select class="dv-fi-sel" id="dvFilterSrc" onchange="renderDvTable()"><option value="">Alle bronnen</option></select>
+    <div class="tb-sep"></div>
+    <span class="dv-count" id="dvCountLabel">— velden</span>
+  </div>
+  <div class="dv-main">
+    <div class="dv-tbl-panel">
+      <div class="dv-tbl-wrap">
+        <table class="dv-table">
+          <thead>
+            <tr>
+              <th style="width:68px;">ID</th>
+              <th>Veldnaam</th>
+              <th style="width:90px;">Type</th>
+              <th style="width:150px;">Brontabel</th>
+              <th>Beschrijving</th>
+            </tr>
+          </thead>
+          <tbody id="dvTableBody">
+            <tr class="loading-row"><td colspan="5">Data wordt geladen uit Google Sheets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dv-detail-panel" id="dvDetailPanel">
+      <div class="dv-detail-empty" id="dvDetailEmpty">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+        <p>Selecteer een dataveld</p>
+        <span>Klik op een rij in de tabel</span>
+      </div>
+      <div class="dv-detail-content" id="dvDetailContent">
+        <div class="dv-detail-header">
+          <div>
+            <div class="dv-detail-id" id="dvId"></div>
+            <div class="dv-detail-name" id="dvName"></div>
+            <div class="dv-detail-badges">
+              <span class="dtype-badge" id="dvTypeBadge"></span>
+            </div>
+          </div>
+        </div>
+        <div class="dv-section">
+          <div class="dv-section-label">Beschrijving</div>
+          <div class="dv-section-text pre-wrap" id="dvDesc"></div>
+        </div>
+        <div class="dv-meta">
+          <div class="dv-meta-item">
+            <div class="meta-key">Brontabel</div>
+            <div class="meta-val" id="dvSrc"></div>
+          </div>
+          <div class="dv-meta-item">
+            <div class="meta-key">Kolomnaam</div>
+            <div class="meta-val" id="dvCol"></div>
+          </div>
+        </div>
+        <div class="dv-section" id="dvValuesSection">
+          <div class="dv-section-label">Mogelijke waarden</div>
+          <div class="dv-values-list" id="dvValuesList"></div>
+        </div>
+        <div class="dv-section" id="dvUsedInSection" style="display:none;">
+          <div class="dv-section-label">Gebruikt in definities</div>
+          <div class="data-fields-wrap" id="dvUsedInList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== DASHBOARDS ============== -->
+<div class="dash-view" id="view-dashboards">
+  <div class="dash-toolbar">
+    <div class="dv-search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="dashSearch" placeholder="Zoek dashboard op naam, team, type…" oninput="renderDashTable()">
+    </div>
+    <select class="dv-fi-sel" id="dashFilterType" onchange="renderDashTable()">
+      <option value="">Intern &amp; Extern</option>
+      <option value="intern">Intern</option>
+      <option value="extern">Extern</option>
+    </select>
+    <select class="dv-fi-sel" id="dashFilterTeam" onchange="renderDashTable()"><option value="">Alle teams</option></select>
+    <div class="tb-sep"></div>
+    <span class="dv-count" id="dashCountLabel">— dashboards</span>
+  </div>
+  <div class="dash-main">
+    <div class="dash-tbl-panel" style="flex:1 1 auto;max-width:none;">
+      <div class="dash-tbl-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th style="width:60px;">ID</th>
+              <th>Naam</th>
+              <th style="width:70px;">Type</th>
+              <th style="width:140px;">Team</th>
+              <th style="width:130px;">Locatie</th>
+              <th style="width:100px;">Bijgewerkt</th>
+              <th style="width:56px;"></th>
+            </tr>
+          </thead>
+          <tbody id="dashTableBody">
+            <tr class="loading-row"><td colspan="7">Data wordt geladen uit Google Sheets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard detail-popup -->
+<div class="dash-modal-overlay" id="dashModalOverlay" onclick="if(event.target===this) closeDashModal()">
+  <div class="dash-modal">
+    <div class="dash-modal-hdr">
+      <div>
+        <span class="dash-badge" id="dashModalTypeBadge"></span>
+        <div class="dash-modal-title" id="dashModalTitle" style="margin-top:8px;"></div>
+      </div>
+      <button class="dash-modal-close" onclick="closeDashModal()" title="Sluiten">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="dash-modal-body">
+      <div>
+        <div class="section-label">Beschrijving</div>
+        <div class="detail-text pre-wrap" id="dashModalDesc"></div>
+      </div>
+      <div class="dash-modal-meta-grid">
+        <div class="meta-item">
+          <div class="meta-key">Team</div>
+          <div class="meta-val" id="dashModalTeam"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Locatie</div>
+          <div class="meta-val" id="dashModalLoc"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Bijgewerkt</div>
+          <div class="meta-val" id="dashModalUpdated"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">ID</div>
+          <div class="meta-val" id="dashModalId"></div>
+        </div>
+      </div>
+      <div id="dashModalLinkWrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ftr">
+  <span>Gemeente Medemblik · www.medemblik.nl · Sociaal Domein</span>
+  <span><a href="https://jortarie.github.io/definitiecatalogus-medemblik/" target="_blank" style="color: rgba(255, 255, 255, 0.45); text-decoration: none; font-size: 0.6rem;" onmouseover="this.style.color='#7EEAF3'" onmouseout="this.style.color='rgba(255,255,255,.45)'">jortarie.github.io/definitiecatalogus-medemblik</a></span>
+  <span id="ftrDate"></span>
+</div>
+
+<script>
+/* ====================================================================
+   CSV-PARSER + CEL-DECODE
+   Zelfde, eenvoudige aanpak als de vorige stap: \n-letterlijk voor
+   meerregelige tekst, enkele-quote-JSON voor structuurvelden.
+   ==================================================================== */
+function parseCSV(text) {
+  if (!text) return [];
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  let i = 0;
+  const len = text.length;
+  while (i < len) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i += 1; continue;
+      }
+      field += ch; i += 1; continue;
+    }
+    if (ch === '"') { inQuotes = true; i += 1; continue; }
+    if (ch === ',') { row.push(field); field = ''; i += 1; continue; }
+    if (ch === '\r') {
+      if (text[i + 1] === '\n') i += 1;
+      row.push(field); rows.push(row); row = []; field = ''; i += 1; continue;
+    }
+    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i += 1; continue; }
+    field += ch; i += 1;
+  }
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter(r => !(r.length === 1 && r[0] === ''));
+}
+
+function parseCSVToRecords(text) {
+  const rows = parseCSV(text);
+  if (rows.length === 0) return [];
+  const header = rows[0];
+  const records = [];
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const rec = {};
+    for (let c = 0; c < header.length; c++) rec[header[c]] = row[c] !== undefined ? row[c] : '';
+    records.push(rec);
+  }
+  return records;
+}
+
+function decodeText(value) {
+  if (value == null) return '';
+  return String(value).split('\\n').join('\n');
+}
+
+function decodeJsonField(value, fallback) {
+  const v = (value || '').trim();
+  if (!v) return fallback;
+  try { return JSON.parse(v.replace(/'/g, '"')); }
+  catch (err) { console.warn('JSON-veld kon niet gelezen worden:', value, err.message); return fallback; }
+}
+
+/* ====================================================================
+   SHEETS-URLS — vul hier de gepubliceerde CSV-links van de 3 tabs in.
+   ==================================================================== */
+const SHEET_URLS = {
+  definities: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1044637075&single=true&output=csv',
+  datavelden: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=574841714&single=true&output=csv',
+  dashboards: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1394577148&single=true&output=csv',
+  processen: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=269674294&single=true&output=csv',
+  // Nieuw tabblad "processen_mc" — MensCentraal-processen (één rij per vraag).
+  // Publiceer het tabblad als CSV (Bestand → Delen → Publiceren op web) en
+  // plak hier de URL met de juiste gid. Leeg = tab wordt stil overgeslagen.
+  processen_mc: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=182487918&single=true&output=csv',
+};
+
+/* ====================================================================
+   STATE
+   ==================================================================== */
+let entries = [];     // definities
+let dvEntries = [];   // datavelden
+let dashEntries = []; // dashboards
+let procEntries = []; // processen: [{ id, naam, team, desc, steps: [{stapNr, stapNaam, stapDesc, volgendeStap, volgendeLabel}] }]
+let currentId = null;
+let currentDvId = null;
+let currentDashId = null;
+let currentProcId = null;
+const issues = []; // {dataset, message}
+
+/* ====================================================================
+   KLEUREN — overgenomen uit de oorspronkelijke app.js COLOR_MAP /
+   DEFAULT_CATS / DEFAULT_STATUSES, zodat dezelfde visuele taal
+   behouden blijft.
+   ==================================================================== */
+const COLOR_MAP = {
+  blue:   {bg:'#E6F1FB', color:'#185FA5'},
+  green:  {bg:'#E1F5EE', color:'#0B6E49'},
+  purple: {bg:'#EDE9FC', color:'#534AB7'},
+  orange: {bg:'#FFF0E6', color:'#993C1D'},
+  teal:   {bg:'#E0F7F9', color:'#0C6E78'},
+  red:    {bg:'#FAECE7', color:'#993C1D'},
+  gray:   {bg:'#F2F5F9', color:'#4A6180'},
+};
+const CAT_COLORS = {
+  'Toegang': 'orange',
+  'In/Uitstroom': 'teal',
+  'Wachtlijst': 'green',
+  'Beslistermijn': 'orange',
+  'Trajecten/Producten': 'red',
+};
+const STATUS_BADGE_CLASS = {
+  'Vastgesteld': 'bdg-vastgesteld',
+  'Definitie en context controleren': 'bdg-review',
+  'Data velden zoeken': 'bdg-concept',
+  'Vervallen': 'bdg-vervallen',
+};
+
+function catPillHtml(cat) {
+  if (!cat) return '<span class="bdg bdg-leeg">—</span>';
+  const colorKey = CAT_COLORS[cat] || 'gray';
+  const c = COLOR_MAP[colorKey];
+  return `<span class="cat-pill" style="background:${c.bg};color:${c.color};">${escHtml(cat)}</span>`;
+}
+function statusBadgeHtml(status) {
+  if (!status) return '<span class="bdg bdg-leeg">—</span>';
+  const cls = STATUS_BADGE_CLASS[status] || 'bdg-leeg';
+  return `<span class="bdg ${cls}">${escHtml(status)}</span>`;
+}
+function escHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+/* Escapet de tekst en markeert alle voorkomens van de zoekterm met
+   <mark class="hl"> (lichtblauwe arcering). Escaping gebeurt per
+   tekstdeel, dus de zoekterm kan nooit HTML injecteren. */
+function hlHtml(str, q) {
+  const s = String(str || '');
+  q = (q || '').trim();
+  if (!q) return escHtml(s);
+  const lower = s.toLowerCase(), ql = q.toLowerCase();
+  let out = '', i = 0;
+  while (true) {
+    const idx = lower.indexOf(ql, i);
+    if (idx < 0) { out += escHtml(s.slice(i)); break; }
+    out += escHtml(s.slice(i, idx)) + '<mark class="hl">' + escHtml(s.slice(idx, idx + q.length)) + '</mark>';
+    i = idx + q.length;
+  }
+  return out;
+}
+
+/* ── Volledigheidscore — zelfde formule als origineel app.js ──────── */
+function completenessScore(e) {
+  const fields = [e.term, e.def, e.cat, e.team, e.status, e.fields || (e.fieldChips && e.fieldChips.length ? 'x' : '')];
+  const filled = fields.filter(f => f && String(f).trim() && String(f).trim() !== '—').length;
+  return Math.round((filled / fields.length) * 100);
+}
+function scoreHtml(pct) {
+  const color = pct >= 80 ? '#1D9E75' : pct >= 50 ? '#EF9F27' : '#E24B4A';
+  return `<div class="score-bar-wrap"><div class="score-bar"><div class="score-bar-fill" style="width:${pct}%;background:${color};"></div></div><span class="score-pct" style="color:${color};">${pct}%</span></div>`;
+}
+
+/* ====================================================================
+   DATA LADEN — fetch per dataset, valideren/decoderen, fallback bij
+   falen. Eén centrale notifyDataLoaded() na alle 3 (voorkomt de oude
+   render-timing-bug).
+   ==================================================================== */
+async function fetchAndMap(url, mapFn) {
+  if (!url) return { rows: [], rowIssues: ['Geen Sheets-URL geconfigureerd.'] };
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const records = parseCSVToRecords(text);
+    return mapFn(records);
+  } catch (err) {
+    console.error('Laden mislukt:', url, err);
+    return { rows: [], rowIssues: [`Kon niet laden uit Sheets: ${err.message}`] };
+  }
+}
+
+function mapDefinitiesRows(records) {
+  const rows = [], rowIssues = [], seen = new Set();
+  const VELD_KOLOMMEN = ['Veld1', 'Veld2', 'Veld3', 'Veld4', 'Veld5', 'Veld6', 'Veld7', 'Veld8'];
+  for (const r of records) {
+    const id = (r.id || '').trim();
+    if (!id) { rowIssues.push(`Rij zonder id overgeslagen (term: "${r.Term || '?'}")`); continue; }
+    if (seen.has(id)) { rowIssues.push(`Dubbele id "${id}" overgeslagen`); continue; }
+    seen.add(id);
+
+    // Veld1...Veld8: elke cel bevat "DF-xxx" of "DF-xxx — leesbare naam".
+    // We bewaren hier alleen het ruwe DF-id; de daadwerkelijke naam/tabel
+    // wordt later (na het laden van Datavelden) opgezocht in resolveFieldChips,
+    // zodat de weergave altijd de actuele Datavelden-naam toont, ook als
+    // iemand die later wijzigt zonder de definitie-rij aan te passen.
+    const veldIds = VELD_KOLOMMEN
+      .map(k => (r[k] || '').trim())
+      .filter(Boolean)
+      .map(v => v.split('—')[0].split('-').slice(0, 2).join('-').trim()) // pak "DF-123" uit "DF-123 — naam" of gewoon "DF-123"
+      .filter(v => /^DF-\d+$/i.test(v));
+
+    rows.push({
+      id, term: r.Term || '', def: decodeText(r.Definitie), ctx: decodeText(r.Businesscontext),
+      fields: '', cat: (r.Categorie || '').trim(), team: (r.Team || '').trim(),
+      status: (r.Status || '').trim(), date: r.date || '', notes: decodeText(r.Notes),
+      veldIds, fieldChips: [], fieldsFull: decodeText(r['Velden en berekenignen']),
+      source: r.Source || '', changelog: decodeJsonField(r.Wijzigingshistorie, []),
+      image: (r.Afbeelding || '').trim(),
+      // Optionele kolom "Uitsplitsingen" (;-gescheiden, bijv. "team;wet"):
+      // bepaalt welke uitsplitsingen de Vraagsteller voor dit begrip
+      // aanbiedt. Leeg of afwezig = de vaste standaardlijst.
+      dimensies: (r.Uitsplitsingen || '').split(';').map(s => s.trim().toLowerCase()).filter(Boolean),
+    });
+  }
+  return { rows, rowIssues };
+}
+
+/* Zet de ruwe veldIds (DF-nummers) van elke definitie om naar volledige
+   chip-objecten ({type, label}) door ze op te zoeken in de geladen
+   Datavelden-lijst. Wordt aangeroepen NA het laden van beide datasets
+   (zie loadAllData), zodat de naam/tabel altijd de actuele Datavelden-
+   waarde toont. Een DF-id dat niet (meer) bestaat in Datavelden wordt
+   overgeslagen en gelogd -- net als overal elders: nooit de hele rij
+   laten verdwijnen om één kapotte verwijzing. */
+function resolveFieldChips(defRows, dvRows, rowIssuesOut) {
+  const dvById = new Map(dvRows.map(d => [d.id, d]));
+  for (const def of defRows) {
+    const chips = [];
+    for (const veldId of def.veldIds || []) {
+      const dv = dvById.get(veldId);
+      if (!dv) {
+        rowIssuesOut.push(`Definitie "${def.id}" verwijst naar "${veldId}", maar dat bestaat niet (meer) in Datavelden.`);
+        continue;
+      }
+      chips.push({ type: 'catalog', id: dv.id, label: `${dv.src ? dv.src + '.' : ''}${dv.col || dv.name}` });
+    }
+    def.fieldChips = chips;
+  }
+}
+
+function mapDataveldenRows(records) {
+  const rows = [], rowIssues = [], seen = new Set();
+  for (const r of records) {
+    const id = (r.id || '').trim();
+    if (!id) { rowIssues.push(`Rij zonder id overgeslagen (name: "${r.Naam || '?'}")`); continue; }
+    if (seen.has(id)) { rowIssues.push(`Dubbele id "${id}" overgeslagen (eerdere rij blijft staan)`); continue; }
+    seen.add(id);
+    rows.push({
+      id, name: r.Naam || '', desc: decodeText(r.Beschrijving), type: (r.Type || '').trim(),
+      src: r.Tabel || '', col: r.Dataveld || '', values: decodeText(r.values), ext: '',
+    });
+  }
+  return { rows, rowIssues };
+}
+
+function mapDashboardsRows(records) {
+  const rows = [], rowIssues = [], seen = new Set();
+  for (const r of records) {
+    const id = (r.id || '').trim();
+    if (!id) { rowIssues.push(`Rij zonder id overgeslagen (name: "${r.Naam || '?'}")`); continue; }
+    if (seen.has(id)) { rowIssues.push(`Dubbele id "${id}" overgeslagen`); continue; }
+    seen.add(id);
+    rows.push({
+      id, name: r.Naam || '', type: (r.type || '').trim(), desc: decodeText(r.Beschrijving),
+      loc: r.Locatie || '', team: (r.team || '').trim(), link: r.link || '', updated: r.updated || '',
+      // Optionele kolom "Begrippen" (;-gescheiden D-ids, bijv. "D-001;D-014"):
+      // welke definities dit dashboard al toont. Gebruikt door de
+      // Vraagsteller voor de "dit bestaat al"-melding.
+      dekt: (r.Begrippen || '').split(';').map(s => s.trim().toUpperCase()).filter(Boolean),
+    });
+  }
+  return { rows, rowIssues };
+}
+
+/* processen: elke CSV-rij is ÉÉN STAP, niet één proces. Rijen met
+   hetzelfde procId worden hier samengevoegd tot één proces-object
+   met een steps-array. Dit houdt het Sheets-format plat (gewone
+   rijen, geen geneste JSON nodig) terwijl de HTML er zelf een figuur
+   uit tekent (zie layout/render-functies hieronder). */
+function mapProcessenRows(records) {
+  const rowIssues = [];
+  const byProc = new Map(); // procId -> { id, naam, team, desc, steps: [] }
+
+  records.forEach((r, idx) => {
+    const procId = (r.procId || '').trim();
+    const stapNrRaw = (r.stapNr || '').trim();
+    if (!procId) { rowIssues.push(`Rij ${idx + 1} zonder procId overgeslagen`); return; }
+    const stapNr = parseInt(stapNrRaw, 10);
+    if (!stapNrRaw || Number.isNaN(stapNr)) {
+      rowIssues.push(`Rij ${idx + 1} (proces "${procId}") heeft geen geldig stapNr, overgeslagen`);
+      return;
+    }
+
+    if (!byProc.has(procId)) {
+      byProc.set(procId, {
+        id: procId,
+        naam: r.procNaam || procId,
+        team: (r.procTeam || '').trim(),
+        desc: decodeText(r.procDesc),
+        type: 'normaal',
+        steps: [],
+      });
+    }
+    const proc = byProc.get(procId);
+
+    const volgendeStap = (r.volgendeStap || '').trim()
+      ? r.volgendeStap.trim().split(';').map(s => parseInt(s.trim(), 10)).filter(n => !Number.isNaN(n))
+      : [];
+    const volgendeLabel = (r.volgendeLabel || '').trim()
+      ? r.volgendeLabel.trim().split(';').map(s => s.trim())
+      : [];
+
+    // Dubbele stapNr binnen hetzelfde proces is een datafout (net als
+    // dubbele id's bij de andere datasets) — eerste blijft staan.
+    if (proc.steps.some(s => s.stapNr === stapNr)) {
+      rowIssues.push(`Proces "${procId}" heeft stapNr ${stapNr} dubbel, tweede voorkomen overgeslagen`);
+      return;
+    }
+
+    // stapType bepaalt de kleur in de figuur. Onbekende of lege
+    // waarde valt terug op 'proces' (neutraal blauw) zodat een
+    // typefout in Sheets niet de hele rij laat verdwijnen — wel
+    // gelogd, zodat het opvalt.
+    const VALID_STEP_TYPES = ['start', 'proces', 'beslissing', 'actie', 'einde'];
+    let stapType = (r.stapType || '').trim().toLowerCase();
+    if (stapType && !VALID_STEP_TYPES.includes(stapType)) {
+      rowIssues.push(`Proces "${procId}" stap ${stapNr}: onbekend stapType "${stapType}", gebruik 'proces' als fallback.`);
+      stapType = 'proces';
+    } else if (!stapType) {
+      stapType = 'proces';
+    }
+
+    proc.steps.push({
+      stapNr,
+      stapNaam: r.stapNaam || `Stap ${stapNr}`,
+      stapDesc: decodeText(r.stapDesc),
+      stapSub: decodeText(r.stapSub),       // optioneel: korte ondertitel onder de stapnaam
+      stapVragen: decodeText(r.stapVragen)  // optioneel: vragen/datapunten, één per regel (\n-gescheiden)
+        .split('\n').map(v => v.trim()).filter(Boolean),
+      stapType,
+      volgendeStap,
+      volgendeLabel,
+    });
+  });
+
+  const rows = [];
+  for (const proc of byProc.values()) {
+    if (proc.steps.length === 0) {
+      rowIssues.push(`Proces "${proc.id}" heeft geen geldige stappen, overgeslagen`);
+      continue;
+    }
+    proc.steps.sort((a, b) => a.stapNr - b.stapNr);
+    rows.push(proc);
+  }
+
+  return { rows, rowIssues };
+}
+
+/* MensCentraal-processen: het tabblad "processen_mc" heeft ÉÉN RIJ PER
+   VRAAG. Proces- en fase-informatie hoeft alleen op de EERSTE rij van
+   een fase ingevuld te worden; de parser neemt de laatst geziene waarde
+   mee naar volgende rijen (carry-forward). Zo kun je een MensCentraal-
+   export bijna 1-op-1 in het tabblad plakken en alleen de fase-rijen
+   aanvullen. Kolommen:
+     procId, procNaam, procTeam, procDesc,
+     faseNr, faseNaam, faseCategorie, faseOptioneel, faseVervolg,
+     vraag, vraagType
+   Optionele extra kolom:
+   - faseSpoor: label van een parallel pad (bijv. "PGB" of "Incidentele
+     maatwerkovereenkomst"). Opeenvolgende fases met een spoor-label
+     worden naast het reguliere pad getekend; fases met hetzelfde label
+     staan onder elkaar in één kolom, verschillende labels komen naast
+     elkaar. Leeg = gewoon in het hoofdpad.
+   - faseCategorie: toegang | toeleiden | besluitvorming | kwaliteit |
+     leveren | afsluiting  (bepaalt de kleur; onbekend → toegang + log)
+   - faseOptioneel: "ja" = gestippelde rand + optioneel-badge
+   - faseVervolg: ;-gescheiden labels van mogelijke vervolgpaden
+   - vraagType: datum | keuze | getal — of de ruwe MensCentraal-waarden
+     DATE / PROCESS_PROPERTY_OPTION / NUMBER. TEXT-rijen worden
+     automatisch overgeslagen (vrije tekst is niet analyseerbaar).   */
+const MC_CATEGORIES = ['toegang', 'toeleiden', 'besluitvorming', 'kwaliteit', 'leveren', 'afsluiting'];
+const MC_TYPE_MAP = { 'date': 'datum', 'process_property_option': 'keuze', 'boolean': 'keuze', 'number': 'getal', 'decimal': 'getal', 'datum': 'datum', 'keuze': 'keuze', 'getal': 'getal' };
+
+function mapMcProcessenRows(records) {
+  const rowIssues = [];
+  const byProc = new Map(); // procId -> proces-object
+  let curProcId = '', curFaseNr = null;
+
+  records.forEach((r, idx) => {
+    // Carry-forward: lege procId/faseNr = zelfde als de rij erboven.
+    const rowProcId = (r.procId || '').trim();
+    if (rowProcId) { curProcId = rowProcId; curFaseNr = null; }
+    if (!curProcId) { rowIssues.push(`MC-rij ${idx + 1} zonder procId (ook niet erboven), overgeslagen`); return; }
+
+    if (!byProc.has(curProcId)) {
+      byProc.set(curProcId, { id: curProcId, naam: curProcId, team: '', desc: '', type: 'menscentraal', fases: [] });
+    }
+    const proc = byProc.get(curProcId);
+    if ((r.procNaam || '').trim()) proc.naam = r.procNaam.trim();
+    if ((r.procTeam || '').trim()) proc.team = r.procTeam.trim();
+    if ((r.procDesc || '').trim()) proc.desc = decodeText(r.procDesc);
+
+    const faseNrRaw = (r.faseNr || '').trim();
+    if (faseNrRaw) {
+      const nr = parseInt(faseNrRaw, 10);
+      if (Number.isNaN(nr)) { rowIssues.push(`MC-rij ${idx + 1} (proces "${curProcId}"): faseNr "${faseNrRaw}" is geen getal, rij overgeslagen`); return; }
+      curFaseNr = nr;
+    }
+    if (curFaseNr === null) { rowIssues.push(`MC-rij ${idx + 1} (proces "${curProcId}") zonder faseNr (ook niet erboven), overgeslagen`); return; }
+
+    let fase = proc.fases.find(f => f.nr === curFaseNr);
+    if (!fase) {
+      fase = { nr: curFaseNr, naam: `Fase ${curFaseNr}`, cat: 'toegang', optioneel: false, spoor: '', vervolg: [], vragen: [] };
+      proc.fases.push(fase);
+    }
+    if ((r.faseNaam || '').trim()) fase.naam = r.faseNaam.trim();
+    if ((r.faseSpoor || '').trim()) fase.spoor = r.faseSpoor.trim();
+    const catRaw = (r.faseCategorie || '').trim().toLowerCase();
+    if (catRaw) {
+      if (MC_CATEGORIES.includes(catRaw)) fase.cat = catRaw;
+      else rowIssues.push(`Proces "${curProcId}" fase ${curFaseNr}: onbekende categorie "${catRaw}", gebruik 'toegang' als fallback.`);
+    }
+    if ((r.faseOptioneel || '').trim()) fase.optioneel = (r.faseOptioneel || '').trim().toLowerCase() === 'ja';
+    if ((r.faseVervolg || '').trim()) fase.vervolg = r.faseVervolg.split(';').map(s => s.trim()).filter(Boolean);
+
+    const vraag = (r.vraag || '').trim();
+    if (!vraag) return; // fase-rij zonder vraag is prima (bijv. "Start zaak")
+    const typeRaw = (r.vraagType || '').trim().toLowerCase();
+    if (typeRaw === 'text' || typeRaw === 'tekst') return; // vrije tekst: niet analyseerbaar, stil overslaan
+    const vtype = MC_TYPE_MAP[typeRaw] || 'keuze';
+    if (typeRaw && !MC_TYPE_MAP[typeRaw]) rowIssues.push(`Proces "${curProcId}" fase ${curFaseNr}: onbekend vraagType "${typeRaw}" bij "${vraag}", gebruik 'keuze'.`);
+    fase.vragen.push({ naam: vraag, type: vtype });
+  });
+
+  const rows = [];
+  for (const proc of byProc.values()) {
+    if (proc.fases.length === 0) { rowIssues.push(`MC-proces "${proc.id}" heeft geen fases, overgeslagen`); continue; }
+    proc.fases.sort((a, b) => a.nr - b.nr);
+    rows.push(proc);
+  }
+  return { rows, rowIssues };
+}
+
+/* ====================================================================
+   HARDCODED PROCESSEN
+   Naast (of zonder) een Sheets-koppeling kunnen hier processen direct
+   in de code worden vastgelegd — handig voor een proces dat nog niet
+   in Sheets staat, of dat je liever niet door iedereen wilt laten
+   bewerken. Zelfde vorm als een proces dat uit Sheets komt: een
+   object met id/naam/team/desc/steps. Bij een procId-botsing met een
+   Sheets-rij wint de Sheets-versie (zie samenvoegLogica in
+   loadAllData) en wordt het hardcoded duplicaat overgeslagen + gelogd.
+   Laat de array leeg ([]) als je geen hardcoded processen wilt.
+   ==================================================================== */
+const HARDCODED_PROCESSEN = [
+  // Voorbeeld — verwijder of vervang dit door een eigen proces:
+  // {
+  //   id: 'HC-001',
+  //   naam: 'Voorbeeld hardcoded proces',
+  //   team: 'WMO & Backoffice',
+  //   desc: 'Dit proces staat niet in Sheets maar direct in de code.',
+  //   steps: [
+  //     { stapNr: 1, stapNaam: 'Eerste stap', stapDesc: 'Toelichting...', stapSub: '', stapVragen: [], volgendeStap: [2], volgendeLabel: [] },
+  //     { stapNr: 2, stapNaam: 'Tweede stap', stapDesc: 'Toelichting...', stapSub: '', stapVragen: [], volgendeStap: [], volgendeLabel: [] },
+  //   ],
+  // },
+];
+
+async function loadAllData() {
+  // Visuele feedback op de vernieuw-knop zolang de fetches lopen
+  const btn = document.getElementById('btnRefreshSheets');
+  const btnHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.style.opacity = '.55'; btn.innerHTML = 'Laden…'; }
+
+  issues.length = 0;
+  const [defRes, dvRes, dashRes, procRes, mcRes] = await Promise.all([
+    fetchAndMap(SHEET_URLS.definities, mapDefinitiesRows),
+    fetchAndMap(SHEET_URLS.datavelden, mapDataveldenRows),
+    fetchAndMap(SHEET_URLS.dashboards, mapDashboardsRows),
+    fetchAndMap(SHEET_URLS.processen, mapProcessenRows),
+    // mc-tab is optioneel: geen URL geconfigureerd = stil overslaan.
+    SHEET_URLS.processen_mc
+      ? fetchAndMap(SHEET_URLS.processen_mc, mapMcProcessenRows)
+      : Promise.resolve({ rows: [], rowIssues: [] }),
+  ]);
+  entries = defRes.rows;
+  dvEntries = dvRes.rows;
+  dashEntries = dashRes.rows;
+  procEntries = procRes.rows;
+
+  // MensCentraal-processen toevoegen; bij een procId-botsing wint de
+  // gewone processen-tab (zelfde principe als bij hardcoded).
+  const normProcIds = new Set(procEntries.map(p => p.id));
+  for (const mc of mcRes.rows) {
+    if (normProcIds.has(mc.id)) {
+      issues.push({ dataset: 'processen', message: `MC-proces "${mc.id}" overgeslagen — id bestaat al in het gewone processen-tabblad.` });
+      continue;
+    }
+    procEntries.push(mc);
+  }
+  mcRes.rowIssues.forEach(m => issues.push({ dataset: 'processen_mc', message: m }));
+
+  // Veld1-Veld8 (DF-ids) omzetten naar volledige chip-info, nu beide
+  // datasets geladen zijn. Issues hierbij gaan in dezelfde issues-array
+  // als de rest, zodat ze ook in de banner verschijnen.
+  const fieldChipIssues = [];
+  resolveFieldChips(entries, dvEntries, fieldChipIssues);
+  fieldChipIssues.forEach(m => issues.push({ dataset: 'definities', message: m }));
+
+  // Hardcoded processen toevoegen, met voorrang voor Sheets bij een
+  // procId-botsing (zo blijft Sheets de "bron van waarheid" als
+  // iemand per ongeluk hetzelfde id hardcoded én in Sheets gebruikt).
+  const sheetsProcIds = new Set(procEntries.map(p => p.id));
+  for (const hc of HARDCODED_PROCESSEN) {
+    if (sheetsProcIds.has(hc.id)) {
+      issues.push({ dataset: 'processen', message: `Hardcoded proces "${hc.id}" overgeslagen — bestaat al in Sheets, Sheets-versie wint.` });
+      continue;
+    }
+    procEntries.push(hc);
+  }
+
+  defRes.rowIssues.forEach(m => issues.push({ dataset: 'definities', message: m }));
+  dvRes.rowIssues.forEach(m => issues.push({ dataset: 'datavelden', message: m }));
+  dashRes.rowIssues.forEach(m => issues.push({ dataset: 'dashboards', message: m }));
+  procRes.rowIssues.forEach(m => issues.push({ dataset: 'processen', message: m }));
+
+  populateFilterOptions();
+  notifyDataLoaded(); // één centrale hook, update alle 3 tabs + header + footer
+
+  if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.innerHTML = btnHtml; }
+}
+
+function populateFilterOptions() {
+  const cats = [...new Set(entries.map(e => e.cat).filter(Boolean))].sort();
+  const statuses = [...new Set(entries.map(e => e.status).filter(Boolean))].sort();
+  const teams = [...new Set(entries.map(e => e.team).filter(Boolean))].sort();
+  const types = [...new Set(dvEntries.map(d => d.type).filter(Boolean))].sort();
+  const srcs = [...new Set(dvEntries.map(d => d.src).filter(Boolean))].sort();
+  const dashTeams = [...new Set(dashEntries.map(d => d.team).filter(Boolean))].sort();
+  const procTeams = [...new Set(procEntries.map(p => p.team).filter(Boolean))].sort();
+
+  fillSelect('filterCat', cats, 'Alle categorieën');
+  fillSelect('filterStatus', statuses, 'Alle statussen');
+  fillSelect('filterTeam', teams, 'Alle teams');
+  fillSelect('dvFilterType', types, 'Alle typen');
+  fillSelect('dvFilterSrc', srcs, 'Alle bronnen');
+  fillSelect('dashFilterTeam', dashTeams, 'Alle teams');
+  fillSelect('procFilterTeam', procTeams, 'Alle teams');
+}
+function fillSelect(id, values, placeholder) {
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  sel.innerHTML = `<option value="">${placeholder}</option>` +
+    values.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+  if (values.includes(current)) sel.value = current;
+}
+
+/* ====================================================================
+   RENDER-HOOK — centrale "data is binnen"-aanroep (Stap 3 uit het
+   herbouwplan). Voorkomt dat de ene tab een oude stand toont terwijl
+   de andere al bijgewerkt is.
+   ==================================================================== */
+function notifyDataLoaded() {
+  renderHeaderCounts();
+  renderIssueBanner();
+  renderTable();
+  renderDvTable();
+  renderDashTable();
+  renderProcList();
+  renderVq();
+}
+
+let activeMainTab = 'definities'; // gesynchroniseerd met switchMainTab
+
+function renderHeaderCounts() {
+  const el = document.getElementById('hdrActiveCount');
+  const labels = {
+    definities: `${entries.length} begrippen`,
+    datavelden: `${dvEntries.length} velden`,
+    dashboards: `${dashEntries.length} dashboards`,
+    processen: `${procEntries.length} processen`,
+    vraagsteller: '',
+  };
+  el.textContent = labels[activeMainTab] || '';
+  document.getElementById('ftrDate').textContent = 'Live uit Google Sheets · ' + new Date().toLocaleDateString('nl-NL', {day:'numeric', month:'long', year:'numeric'});
+}
+
+function renderIssueBanner() {
+  const banner = document.getElementById('dataIssueBanner');
+  if (issues.length === 0) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  banner.innerHTML = `${issues.length} rij(en) konden niet (volledig) geladen worden — <a onclick="console.table(issues)">zie console voor details</a>.`;
+  console.warn('Data-issues:', issues);
+}
+
+/* ====================================================================
+   DEFINITIES — tabel + detail
+   ==================================================================== */
+function renderTable() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const fc = document.getElementById('filterCat').value;
+  const fs = document.getElementById('filterStatus').value;
+  const ft = document.getElementById('filterTeam').value;
+
+  let filtered = entries.filter(e => {
+    if (fc && e.cat !== fc) return false;
+    if (fs && e.status !== fs) return false;
+    if (ft && e.team !== ft) return false;
+    const chipText = (e.fieldChips || []).map(c => c.label).join(' ');
+    if (q && !(`${e.term} ${e.def} ${e.fields} ${chipText} ${e.fieldsFull}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  document.getElementById('countLabel').textContent = `${filtered.length} begrippen`;
+
+  const tbody = document.getElementById('tableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="6">Geen begrippen gevonden.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(e => {
+    const pct = completenessScore(e);
+    return `<tr data-id="${escHtml(e.id)}" class="${e.id===currentId?'selected':''}">
+      <td class="id-cell">${hlHtml(e.id, q)}</td>
+      <td>
+        <div class="term-cell">${hlHtml(e.term, q)}</div>
+        <div class="def-preview">${hlHtml(e.def, q)}</div>
+      </td>
+      <td class="cat-cell">${catPillHtml(e.cat)}</td>
+      <td style="font-size:.63rem;color:var(--sub);white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;">${escHtml(e.team)}</td>
+      <td>${statusBadgeHtml(e.status)}</td>
+      <td class="score-td">${scoreHtml(pct)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function selectEntry(id) {
+  currentId = id;
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+
+  document.getElementById('detailEmpty').style.display = 'none';
+  document.getElementById('detailContent').style.display = 'flex';
+
+  document.getElementById('dId').textContent = e.id;
+  document.getElementById('dTerm').textContent = e.term;
+  document.getElementById('dCatBadge').innerHTML = catPillHtml(e.cat);
+  document.getElementById('dStatusBadge').innerHTML = statusBadgeHtml(e.status);
+  document.getElementById('dDef').textContent = e.def || '—';
+
+  toggleSection('dCtxSection', e.ctx, 'dCtx');
+  toggleSection('dFieldsFullSection', e.fieldsFull, 'dFieldsFull');
+  toggleSection('dNotesSection', e.notes, 'dNotes');
+
+  const fieldsWrap = document.getElementById('dFields');
+  const chips = (e.fieldChips || []);
+  if (chips.length) {
+    fieldsWrap.innerHTML = chips.map(c =>
+      c.id
+        ? `<span class="df-chip catalog df-chip-link" data-dfid="${escHtml(c.id)}" title="Open dit dataveld op de Datavelden-tab">${escHtml(c.label || c.id)}</span>`
+        : `<span class="df-chip ${c.type === 'custom' ? 'custom' : 'catalog'}">${escHtml(c.label || '')}</span>`
+    ).join('');
+    document.getElementById('dFieldsSection').style.display = '';
+  } else if (e.fields) {
+    fieldsWrap.innerHTML = `<span class="df-chip catalog">${escHtml(e.fields)}</span>`;
+    document.getElementById('dFieldsSection').style.display = '';
+  } else {
+    document.getElementById('dFieldsSection').style.display = 'none';
+  }
+
+  document.getElementById('dTeam').textContent = e.team || '—';
+  document.getElementById('dDate').textContent = e.date || '—';
+  document.getElementById('dCat').textContent = e.cat || '—';
+  document.getElementById('dStatus').textContent = e.status || '—';
+
+  const imgSection = document.getElementById('dImageSection');
+  const imgEl = document.getElementById('dImage');
+  if (e.image && /^https?:\/\//i.test(e.image)) {
+    imgEl.src = e.image;
+    imgEl.alt = e.term || '';
+    imgSection.style.display = '';
+  } else {
+    imgEl.removeAttribute('src');
+    imgSection.style.display = 'none';
+  }
+
+  const cl = document.getElementById('dChangelog');
+  const entries_cl = e.changelog || [];
+  if (entries_cl.length) {
+    cl.innerHTML = entries_cl.map(c =>
+      `<div class="changelog-item"><span class="changelog-dot"></span><span class="changelog-date">${escHtml(c.date || '')}</span><span class="changelog-action">${escHtml(c.action || '')}</span></div>`
+    ).join('');
+  } else {
+    cl.innerHTML = `<div class="changelog-item"><span class="changelog-dot"></span><span class="changelog-action" style="font-style:italic;">Nog geen wijzigingen geregistreerd</span></div>`;
+  }
+
+  renderTable(); // her-render voor 'selected'-highlight
+}
+
+function toggleSection(sectionId, value, contentId) {
+  const has = value && String(value).trim();
+  document.getElementById(sectionId).style.display = has ? '' : 'none';
+  if (has) document.getElementById(contentId).textContent = value;
+}
+
+/* ====================================================================
+   DATAVELDEN — tabel + detail
+   ==================================================================== */
+function dtypeClass(type) {
+  const t = (type || '').toLowerCase();
+  if (t === 'date') return 'date';
+  if (t === 'datetime') return 'datetime';
+  if (['varchar', 'longtext', 'text'].includes(t)) return 'varchar';
+  if (['decimal', 'bigint', 'int', 'tinyint', 'bit', 'smallint', 'boolean'].includes(t)) return 'decimal';
+  return '';
+}
+
+function renderDvTable() {
+  const q = (document.getElementById('dvSearch').value || '').toLowerCase();
+  const ft = document.getElementById('dvFilterType').value;
+  const fs = document.getElementById('dvFilterSrc').value;
+
+  let filtered = dvEntries.filter(d => {
+    if (ft && d.type !== ft) return false;
+    if (fs && d.src !== fs) return false;
+    if (q && !(`${d.name} ${d.desc} ${d.src} ${d.col}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  document.getElementById('dvCountLabel').textContent = `${filtered.length} velden`;
+
+  const tbody = document.getElementById('dvTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="5">Geen datavelden gevonden.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(d => `
+    <tr data-id="${escHtml(d.id)}" class="${d.id===currentDvId?'selected':''}">
+      <td class="dv-id">${hlHtml(d.id, q)}</td>
+      <td><span class="dv-name">${hlHtml(d.name, q)}</span></td>
+      <td><span class="dtype-badge ${dtypeClass(d.type)}">${escHtml(d.type)}</span></td>
+      <td class="dv-src">${hlHtml(d.src, q)}</td>
+      <td style="font-size:.7rem;color:var(--sub);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${hlHtml((d.desc||'').split('\n')[0], q)}</td>
+    </tr>
+  `).join('');
+}
+
+function selectDvEntry(id) {
+  currentDvId = id;
+  const d = dvEntries.find(x => x.id === id);
+  if (!d) return;
+
+  document.getElementById('dvDetailEmpty').style.display = 'none';
+  document.getElementById('dvDetailContent').style.display = 'flex';
+
+  document.getElementById('dvId').textContent = d.id;
+  document.getElementById('dvName').textContent = d.name;
+  const badge = document.getElementById('dvTypeBadge');
+  badge.className = `dtype-badge ${dtypeClass(d.type)}`;
+  badge.textContent = d.type;
+  document.getElementById('dvDesc').textContent = d.desc || '—';
+  document.getElementById('dvSrc').textContent = d.src || '—';
+  document.getElementById('dvCol').textContent = d.col || '—';
+
+  // Reverse lookup: welke definities gebruiken dit dataveld?
+  const usedIn = entries.filter(e => (e.veldIds || []).includes(d.id));
+  const usedInSection = document.getElementById('dvUsedInSection');
+  const usedInList = document.getElementById('dvUsedInList');
+  if (usedIn.length) {
+    usedInList.innerHTML = usedIn.map(e =>
+      `<span class="df-chip catalog df-chip-link" data-defid="${escHtml(e.id)}" title="Open deze definitie op de Definities-tab">${escHtml(e.id)} · ${escHtml(e.term)}</span>`
+    ).join('');
+    usedInSection.style.display = '';
+  } else {
+    usedInList.innerHTML = '';
+    usedInSection.style.display = 'none';
+  }
+
+  const valuesSection = document.getElementById('dvValuesSection');
+  const valuesList = document.getElementById('dvValuesList');
+  if (d.values && d.values.trim()) {
+    const lines = d.values.split('\n').filter(l => l.trim());
+    valuesList.innerHTML = lines.map(line => {
+      const [code, ...rest] = line.split('—');
+      const desc = rest.join('—').trim();
+      return `<div class="dv-value-row"><span class="dv-value-code">${escHtml(code.trim())}</span>${desc ? `<span class="dv-value-desc">${escHtml(desc)}</span>` : ''}</div>`;
+    }).join('');
+    valuesSection.style.display = '';
+  } else {
+    valuesSection.style.display = 'none';
+  }
+
+  renderDvTable();
+}
+
+/* ====================================================================
+   DASHBOARDS — tabel + detail
+   ==================================================================== */
+/* Alleen bekende type-waarden als CSS-klasse doorlaten (voorkomt
+   class-injectie vanuit het Sheet) + hoofdletterongevoelig. */
+function dashTypeClass(type) {
+  const t = (type || '').trim().toLowerCase();
+  return (t === 'intern' || t === 'extern') ? t : '';
+}
+/* Alleen echte http(s)-links accepteren — zelfde check als bij de
+   Afbeelding-kolom. Voorkomt javascript:-links vanuit het Sheet. */
+function safeLink(url) {
+  const u = (url || '').trim();
+  return /^https?:\/\//i.test(u) ? u : '';
+}
+
+function renderDashTable() {
+  const q = (document.getElementById('dashSearch').value || '').toLowerCase();
+  const ftype = document.getElementById('dashFilterType').value;
+  const fteam = document.getElementById('dashFilterTeam').value;
+
+  let filtered = dashEntries.filter(d => {
+    if (ftype && (d.type || '').trim().toLowerCase() !== ftype) return false;
+    if (fteam && d.team !== fteam) return false;
+    if (q && !(`${d.name} ${d.team} ${d.desc} ${d.loc}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  document.getElementById('dashCountLabel').textContent = `${filtered.length} dashboards`;
+
+  const tbody = document.getElementById('dashTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="7">Geen dashboards gevonden.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(d => `
+    <tr data-id="${escHtml(d.id)}" class="${d.id===currentDashId?'selected':''}">
+      <td class="dash-id">${hlHtml(d.id, q)}</td>
+      <td class="dash-name">${hlHtml(d.name, q)}</td>
+      <td><span class="dash-badge ${dashTypeClass(d.type)}">${escHtml(d.type)}</span></td>
+      <td class="dash-team">${hlHtml(d.team, q)}</td>
+      <td style="font-size:.7rem;color:var(--sub);">${hlHtml(d.loc, q)}</td>
+      <td style="font-size:.68rem;color:var(--sub);">${escHtml(d.updated)}</td>
+      <td style="text-align:center;">${safeLink(d.link) ? `<a class="dash-row-open" href="${escHtml(safeLink(d.link))}" target="_blank" rel="noopener" title="Open dit dashboard direct in een nieuw tabblad">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </a>` : ''}</td>
+    </tr>
+  `).join('');
+}
+
+function selectDashEntry(id) {
+  currentDashId = id;
+  const d = dashEntries.find(x => x.id === id);
+  if (!d) return;
+  renderDashTable(); // 'selected'-highlight bijwerken
+  openDashModal(d);
+}
+
+function openDashModal(d) {
+  document.getElementById('dashModalTitle').textContent = d.name;
+  const badge = document.getElementById('dashModalTypeBadge');
+  badge.className = `dash-badge ${dashTypeClass(d.type)}`;
+  badge.textContent = d.type;
+  document.getElementById('dashModalDesc').textContent = d.desc || '—';
+  document.getElementById('dashModalTeam').textContent = d.team || '—';
+  document.getElementById('dashModalLoc').textContent = d.loc || '—';
+  document.getElementById('dashModalUpdated').textContent = d.updated || '—';
+  document.getElementById('dashModalId').textContent = d.id;
+
+  const linkWrap = document.getElementById('dashModalLinkWrap');
+  linkWrap.innerHTML = safeLink(d.link) ? `<a class="dash-cta" href="${escHtml(safeLink(d.link))}" target="_blank" rel="noopener">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+    Open dashboard
+  </a>` : `<div class="dash-nolink">Geen link beschikbaar voor dit dashboard — vul de kolom "link" in het Sheet in.</div>`;
+
+  document.getElementById('dashModalOverlay').classList.add('open');
+}
+
+function closeDashModal() {
+  document.getElementById('dashModalOverlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeDashModal(); }
+});
+
+/* ====================================================================
+   PROCESSEN — lijst + automatisch getekende flow-figuur.
+   Layout-/render-logica hieronder is apart getest (zie gesprek) tegen
+   een synthetisch voorbeeldproces met vertakkingen/samenkomsten
+   voordat dit hier werd geïntegreerd.
+   ==================================================================== */
+function renderProcList() {
+  const q = (document.getElementById('procSearch').value || '').toLowerCase();
+  const ft = document.getElementById('procFilterTeam').value;
+  const ftype = document.getElementById('procFilterType').value;
+
+  const filtered = procEntries.filter(p => {
+    if (ftype && (p.type || 'normaal') !== ftype) return false;
+    if (ft && p.team !== ft) return false;
+    if (q && !(`${p.naam} ${p.team} ${p.desc}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  document.getElementById('procCountLabel').textContent = `${filtered.length} processen`;
+
+  const list = document.getElementById('procList');
+  if (filtered.length === 0) {
+    list.innerHTML = procEntries.length === 0
+      ? `<div class="empty-state" style="color:#fff;">Nog geen processen — voeg rijen toe aan het 'processen'-tabblad in Google Sheets.</div>`
+      : `<div class="empty-state" style="color:#fff;">Geen processen gevonden.</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => {
+    const isMc = p.type === 'menscentraal';
+    const countLabel = isMc
+      ? `${p.fases.length} fases · ${p.fases.reduce((n, f) => n + f.vragen.length, 0)} vragen`
+      : `${p.steps.length} stappen`;
+    const typeBadge = isMc
+      ? `<span class="proc-type-badge mc">MensCentraal</span>`
+      : `<span class="proc-type-badge">Normaal</span>`;
+    const sel = p.id === currentProcId ? ' selected' : '';
+    return `
+    <div class="proc-card${sel}" data-id="${escHtml(p.id)}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div class="proc-card-name">${hlHtml(p.naam, q)}</div>
+        ${typeBadge}
+      </div>
+      <div class="proc-card-desc">${hlHtml(p.desc, q) || 'Geen beschrijving'}</div>
+      <div class="proc-card-foot">
+        <span>${hlHtml(p.team, q) || '—'}</span>
+        <span class="proc-card-steps">${countLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Layout: wijst elke stap een verticale laag toe op basis van de
+   langste keten van voorgangers, zodat samenkomende paden (zoals
+   stap 4 en 5 die beide naar 6 gaan) na hun laatste voorganger
+   komen. ──────────────────────────────────────────────────────── */
+function computeStepLayers(steps) {
+  const incoming = new Map(steps.map(s => [s.stapNr, []]));
+  for (const s of steps) {
+    for (const next of s.volgendeStap) {
+      if (incoming.has(next)) incoming.get(next).push(s.stapNr);
+    }
+  }
+  const layer = new Map();
+  const visiting = new Set();
+  function computeLayer(nr) {
+    if (layer.has(nr)) return layer.get(nr);
+    if (visiting.has(nr)) { console.warn(`Cyclus bij stap ${nr}, layout kan afwijken.`); return 0; }
+    visiting.add(nr);
+    const preds = incoming.get(nr) || [];
+    const result = preds.length === 0 ? 0 : Math.max(...preds.map(p => computeLayer(p))) + 1;
+    visiting.delete(nr);
+    layer.set(nr, result);
+    return result;
+  }
+  for (const s of steps) computeLayer(s.stapNr);
+  return layer;
+}
+
+/* ── Volgorde binnen elke laag: sorteert stappen op de gemiddelde
+   x-volgorde-index van hun voorgangers in de vorige laag (eenvoudige
+   barycenter-heuristiek). Zonder dit raken parallelle routes (zoals
+   "Nee"-pad en "Ja"-pad die later weer samenkomen) elkaar onnodig
+   kruisend, omdat groupByLayer anders gewoon de CSV-rijvolgorde
+   aanhoudt in plaats van de visuele ouder-volgorde te volgen. ────── */
+function groupByLayer(steps, layerMap) {
+  const groups = new Map();
+  for (const s of steps) {
+    const l = layerMap.get(s.stapNr);
+    if (!groups.has(l)) groups.set(l, []);
+    groups.get(l).push(s);
+  }
+
+  const maxLayer = Math.max(...layerMap.values());
+  const xIndexByStep = new Map(); // stapNr -> positie-index binnen zijn laag
+
+  // Laag 0: volgorde blijft de CSV-volgorde (geen voorgangers om op te sorteren).
+  const layer0 = groups.get(0) || [];
+  layer0.forEach((s, i) => xIndexByStep.set(s.stapNr, i));
+
+  // Bouw incoming-map (welke stappen wijzen naar welke) opnieuw op,
+  // zelfde als in computeStepLayers, maar hier lokaal nodig om per
+  // stap de voorgangers te kunnen opvragen.
+  const incoming = new Map(steps.map(s => [s.stapNr, []]));
+  for (const s of steps) {
+    for (const next of s.volgendeStap) {
+      if (incoming.has(next)) incoming.get(next).push(s.stapNr);
+    }
+  }
+
+  for (let l = 1; l <= maxLayer; l++) {
+    const stepsInLayer = groups.get(l) || [];
+    // Barycenter: gemiddelde x-index van de voorgangers (die al een
+    // x-index hebben, want voorgangers liggen altijd in een eerdere
+    // laag die we al verwerkt hebben).
+    const withScore = stepsInLayer.map(s => {
+      const preds = incoming.get(s.stapNr) || [];
+      const predXs = preds.map(p => xIndexByStep.get(p)).filter(x => x !== undefined);
+      const score = predXs.length > 0 ? predXs.reduce((a, b) => a + b, 0) / predXs.length : 0;
+      return { step: s, score };
+    });
+    withScore.sort((a, b) => a.score - b.score);
+    groups.set(l, withScore.map(w => w.step));
+    withScore.forEach((w, i) => xIndexByStep.set(w.step.stapNr, i));
+  }
+
+  return groups;
+}
+
+function wrapToTwoLines(str, maxCharsPerLine) {
+  const words = String(str || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxCharsPerLine && current) {
+      lines.push(current);
+      current = word;
+      if (lines.length === 2) break;
+    } else {
+      current = candidate;
+    }
+  }
+  if (lines.length < 2 && current) lines.push(current);
+  const consumedWords = lines.join(' ').split(/\s+/).length;
+  if (consumedWords < words.length) {
+    const last = lines[lines.length - 1];
+    lines[lines.length - 1] = last.length > 3 ? last.slice(0, -1) + '…' : last + '…';
+  }
+  return lines;
+}
+
+function renderProcessFlowSVG(steps, layerMap, groups, selectedStapNr) {
+  const boxW = 200, minBoxH = 64, lineHeight = 17, colGap = 32, rowGap = 70, padding = 40;
+
+  const wrapped = new Map();
+  for (const s of steps) wrapped.set(s.stapNr, wrapToTwoLines(s.stapNaam, 19));
+
+  const maxLayer = Math.max(...layerMap.values());
+  const maxStepsInLayer = Math.max(...[...groups.values()].map(g => g.length));
+  const svgWidth = padding * 2 + maxStepsInLayer * boxW + (maxStepsInLayer - 1) * colGap;
+
+  const layerHeights = new Map();
+  for (const [layerNr, stepsInLayer] of groups) {
+    const maxLines = Math.max(...stepsInLayer.map(s => wrapped.get(s.stapNr).length));
+    layerHeights.set(layerNr, Math.max(minBoxH, 36 + maxLines * lineHeight));
+  }
+
+  let svgHeight;
+  const layerYStart = new Map();
+  {
+    let cursorY = padding;
+    for (let l = 0; l <= maxLayer; l++) {
+      layerYStart.set(l, cursorY);
+      cursorY += layerHeights.get(l) + rowGap;
+    }
+    svgHeight = cursorY - rowGap + padding;
+  }
+
+  const pos = new Map();
+  for (const [layerNr, stepsInLayer] of groups) {
+    const n = stepsInLayer.length;
+    const totalWidth = n * boxW + (n - 1) * colGap;
+    const startX = (svgWidth - totalWidth) / 2;
+    const boxH = layerHeights.get(layerNr);
+    const y = layerYStart.get(layerNr);
+    stepsInLayer.forEach((step, i) => {
+      const x = startX + i * (boxW + colGap);
+      pos.set(step.stapNr, { x, y, w: boxW, h: boxH });
+    });
+  }
+
+  let arrows = '';
+  for (const s of steps) {
+    const from = pos.get(s.stapNr);
+    s.volgendeStap.forEach((nextNr, idx) => {
+      const to = pos.get(nextNr);
+      if (!from || !to) return;
+      const label = (s.volgendeLabel && s.volgendeLabel[idx]) || '';
+      const x1 = from.x + from.w / 2, y1 = from.y + from.h;
+      const x2 = to.x + to.w / 2, y2 = to.y;
+      const midY = (y1 + y2) / 2;
+      const path = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      arrows += `<path d="${path}" fill="none" stroke="#185FA5" stroke-width="1.8" marker-end="url(#proc-arrowhead)" opacity="0.75"/>`;
+      if (label) {
+        const labelX = (x1 + x2) / 2, labelY = midY;
+        arrows += `<rect x="${labelX - 18}" y="${labelY - 11}" width="36" height="20" rx="6" fill="#fff" stroke="#E1E7EF"/>`;
+        arrows += `<text x="${labelX}" y="${labelY + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="#185FA5">${escHtml(label)}</text>`;
+      }
+    });
+  }
+
+  // Kleuren per stapType, zelfde palet-stijl als de rest van de app
+  // (COLOR_MAP/CAT_COLORS) — elke categorie krijgt een herkenbare
+  // achtergrond/randkleur/tekstkleur combinatie.
+  const STEP_TYPE_STYLE = {
+    start:      { fill: '#E1F5EE', stroke: '#1D9E75', text: '#0B6E49' },
+    proces:     { fill: '#E6F1FB', stroke: '#378ADD', text: '#185FA5' },
+    beslissing: { fill: '#FFF0E6', stroke: '#F26722', text: '#993C1D' },
+    actie:      { fill: '#EDE9FC', stroke: '#7F77DD', text: '#534AB7' },
+    einde:      { fill: '#E1F5EE', stroke: '#0B6E49', text: '#0B6E49' },
+  };
+
+  let boxes = '';
+  for (const s of steps) {
+    const p = pos.get(s.stapNr);
+    const isSelected = s.stapNr === selectedStapNr;
+    const style = STEP_TYPE_STYLE[s.stapType] || STEP_TYPE_STYLE.proces;
+    const fill = style.fill;
+    const stroke = isSelected ? '#002E56' : style.stroke;
+    const strokeWidth = isSelected ? 3 : 1.4;
+    const textColor = style.text;
+    const nameLines = wrapped.get(s.stapNr);
+    const nameLinesHtml = nameLines.map((line, i) =>
+      `<text x="${p.x + 14}" y="${p.y + 44 + i * lineHeight}" font-size="13" font-weight="700" fill="${textColor}">${escHtml(line)}</text>`
+    ).join('');
+    boxes += `
+      <g style="cursor:pointer;" data-stapnr="${s.stapNr}">
+        <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>
+        <text x="${p.x + 14}" y="${p.y + 24}" font-size="10" font-weight="700" fill="${textColor}" opacity="0.7">STAP ${s.stapNr}</text>
+        ${nameLinesHtml}
+      </g>`;
+  }
+
+  return `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width:100%;max-width:${svgWidth}px;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="proc-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 Z" fill="#185FA5"/>
+      </marker>
+    </defs>
+    ${arrows}
+    ${boxes}
+  </svg>`;
+}
+
+const NORMAAL_LEGEND = `
+  <span><i style="background:#1D9E75;"></i>Start / melding</span>
+  <span><i style="background:#378ADD;"></i>Processtap</span>
+  <span><i style="background:#F26722;"></i>Beslissing</span>
+  <span><i style="background:#7F77DD;"></i>Actie / taak</span>
+  <span><i style="background:#0B6E49;"></i>Einde / besluit</span>`;
+
+/* Kleuren per fase-categorie (MensCentraal) — zelfde huisstijlpalet
+   als de rest van de app. 'header' is de donkere fase-balk (witte
+   tekst), 'tag'/'text' voor lichte accenten. */
+const MC_CAT_STYLE = {
+  toegang:        { header: '#005496', label: 'Toegang' },
+  toeleiden:      { header: '#1D9E75', label: 'Toeleiden / regie' },
+  besluitvorming: { header: '#F26722', label: 'Besluitvorming' },
+  kwaliteit:      { header: '#7F77DD', label: 'Kwaliteit / controle' },
+  leveren:        { header: '#0C8FA0', label: 'Leveren / administratie' },
+  afsluiting:     { header: '#4A6180', label: 'Afsluiting' },
+};
+const MC_VRAAGTYPE_STYLE = {
+  datum: { cls: 'mc-tag-datum', label: 'Datumveld' },
+  keuze: { cls: 'mc-tag-keuze', label: 'Keuzeveld' },
+  getal: { cls: 'mc-tag-getal', label: 'Getalveld' },
+};
+const mcOpenFases = new Set(); // welke fases staan uitgeklapt (nrs) — leeg = alles dicht
+let mcSearchQuery = '';        // zoekterm binnen het geopende MC-proces
+
+function mcLegendHtml(proc) {
+  const usedCats = [...new Set(proc.fases.map(f => f.cat))];
+  const catPart = usedCats.map(c => {
+    const st = MC_CAT_STYLE[c] || MC_CAT_STYLE.toegang;
+    return `<span><i style="background:${st.header};"></i>${escHtml(st.label)}</span>`;
+  }).join('');
+  const typePart = Object.values(MC_VRAAGTYPE_STYLE).map(t =>
+    `<span><i class="${t.cls}" style="border-radius:3px;"></i>${t.label}</span>`).join('');
+  return catPart + `<span style="width:1px;background:var(--bd);align-self:stretch;"></span>` + typePart;
+}
+
+function mcVraagTagHtml(v, q) {
+  const st = MC_VRAAGTYPE_STYLE[v.type] || MC_VRAAGTYPE_STYLE.keuze;
+  return `<span class="mc-tag ${st.cls}">${hlHtml(v.naam, q)}</span>`;
+}
+
+/* ── Secties bouwen: opeenvolgende fases met een spoor-label vormen
+   samen één parallel blok; daarbinnen wordt per spoor-label een kolom
+   gemaakt. Fases zonder spoor zijn gewone hoofdpad-stappen. ───────── */
+function buildMcSections(fases) {
+  const sections = [];
+  let cur = null;
+  for (const f of fases) {
+    if (f.spoor) {
+      if (!cur || cur.type !== 'parallel') { cur = { type: 'parallel', lanes: new Map() }; sections.push(cur); }
+      if (!cur.lanes.has(f.spoor)) cur.lanes.set(f.spoor, []);
+      cur.lanes.get(f.spoor).push(f);
+    } else {
+      if (!cur || cur.type !== 'seq') { cur = { type: 'seq', fases: [] }; sections.push(cur); }
+      cur.fases.push(f);
+    }
+  }
+  return sections;
+}
+
+/* Vaste toolbar (jumpbalk + zoekveld + alles-knoppen): wordt maar één
+   keer gerenderd bij het openen, zodat het zoekveld focus houdt terwijl
+   de flow eronder opnieuw getekend wordt. */
+function mcToolbarHtml(proc) {
+  const pills = proc.fases.map(f => {
+    const st = MC_CAT_STYLE[f.cat] || MC_CAT_STYLE.toegang;
+    return `<span class="mc-jump-pill" data-mcjump="${f.nr}" title="${escHtml(f.naam)} — ${f.vragen.length} vragen${f.spoor ? ' · pad: ' + escHtml(f.spoor) : ''}${f.optioneel ? ' (optioneel)' : ''}">
+      <i style="background:${st.header};"></i>${f.nr}. ${escHtml(f.naam)}${f.optioneel ? ' *' : ''}
+    </span>`;
+  }).join('');
+  return `<div class="mc-toolbar">
+    <div class="mc-jumpbar">${pills}</div>
+    <div class="mc-toolbar-row2">
+      <div class="mc-search-wrap">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="mcSearchInput" placeholder="Zoek een vraag in dit proces…">
+        <span class="mc-search-count" id="mcSearchCount"></span>
+      </div>
+      <div class="mc-toolbar-actions">
+        <button type="button" class="mc-toolbtn" data-mcall="open">Alles uitklappen</button>
+        <button type="button" class="mc-toolbtn" data-mcall="close">Alles inklappen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Eén fase-kaart. Bij een actieve zoekterm: fases met een treffer
+   klappen automatisch open (alleen de treffers gemarkeerd), fases
+   zonder treffer dimmen. Zonder zoekterm geldt de open/dicht-status
+   uit mcOpenFases. */
+function mcFaseCardHtml(f, q) {
+  const st = MC_CAT_STYLE[f.cat] || MC_CAT_STYLE.toegang;
+  const matchedVragen = q ? f.vragen.filter(v => v.naam.toLowerCase().includes(q)) : f.vragen;
+  const nameMatch = q && f.naam.toLowerCase().includes(q);
+  const hasMatch = !q || matchedVragen.length > 0 || nameMatch;
+  const open = q ? (matchedVragen.length > 0) : mcOpenFases.has(f.nr);
+  const shownVragen = q ? matchedVragen : f.vragen;
+
+  // Ingeklapt: compacte type-verdeling (aantal keuze/datum/getal) als
+  // gekleurde mini-badges, zodat de kop ook dicht al informatie geeft.
+  const counts = {};
+  f.vragen.forEach(v => { counts[v.type] = (counts[v.type] || 0) + 1; });
+  const miniHtml = Object.entries(counts).map(([type, n]) => {
+    const ts = MC_VRAAGTYPE_STYLE[type] || MC_VRAAGTYPE_STYLE.keuze;
+    return `<span class="mc-mini ${ts.cls}" title="${n} ${ts.label.toLowerCase()}en">${n}</span>`;
+  }).join('');
+
+  const tagsHtml = f.vragen.length
+    ? `<div class="mc-tags">${shownVragen.map(v => mcVraagTagHtml(v, q)).join('')}</div>`
+    : `<div class="mc-geen-vragen">Geen analyseerbare velden in deze fase</div>`;
+  const vervolgHtml = f.vervolg.length
+    ? `<div class="mc-paden">${f.vervolg.map(v => `<span class="mc-pad-pill">→ ${escHtml(v)}</span>`).join('')}</div>`
+    : '';
+
+  return `
+    <div class="mc-fase ${f.optioneel ? 'mc-fase-opt' : ''} ${q && !hasMatch ? 'mc-fase-dim' : ''}" id="mcfase-${f.nr}" data-mcfase="${f.nr}">
+      <div class="mc-fase-tag" style="background:${st.header};">${escHtml(st.label.split(' ')[0])}</div>
+      <div class="mc-fase-body">
+        <div class="mc-fase-hdr" style="background:${st.header};">
+          <div class="mc-fase-hdr-l">
+            <span class="mc-fase-nr">${f.nr}</span>
+            <span class="mc-fase-naam">${q ? hlHtml(f.naam, q) : escHtml(f.naam)}</span>
+            ${f.optioneel ? `<span class="mc-fase-optbadge">optioneel</span>` : ''}
+          </div>
+          <div class="mc-fase-hdr-r">
+            ${open ? '' : miniHtml}
+            <span class="mc-fase-count">${q ? `${matchedVragen.length}/${f.vragen.length}` : f.vragen.length} vragen</span>
+            <span class="mc-fase-toggle-icon">${open ? '▲' : '▼'}</span>
+          </div>
+        </div>
+        ${open ? `<div class="mc-fase-data">${tagsHtml}</div>${vervolgHtml}` : ''}
+      </div>
+    </div>`;
+}
+
+function renderMcFlowHtml(proc) {
+  const q = mcSearchQuery.trim().toLowerCase();
+  const sections = buildMcSections(proc.fases);
+  const parts = [];
+
+  sections.forEach((sec, si) => {
+    if (si > 0) parts.push(`<div class="mc-conn"><div class="mc-arr"></div></div>`);
+
+    if (sec.type === 'seq') {
+      sec.fases.forEach((f, i) => {
+        if (i > 0) parts.push(`<div class="mc-conn"><div class="mc-arr"></div></div>`);
+        parts.push(mcFaseCardHtml(f, q));
+      });
+      return;
+    }
+
+    // Parallel blok: kolom per spoor. Bij één spoor komt er links een
+    // "regulier pad"-doorloopkolom bij, zodat zichtbaar is dat het
+    // hoofdpad gewoon doorloopt terwijl dit pad ernaast bestaat.
+    const lanes = [...sec.lanes.entries()];
+    const laneHtml = lanes.map(([label, fases]) => {
+      const inner = fases.map((f, i) =>
+        (i > 0 ? `<div class="mc-conn mc-conn-sm"><div class="mc-arr"></div></div>` : '') + mcFaseCardHtml(f, q)
+      ).join('');
+      return `<div class="mc-lane">
+        <div class="mc-lane-label">${escHtml(label)}</div>
+        ${inner}
+      </div>`;
+    });
+    if (lanes.length === 1) {
+      laneHtml.unshift(`<div class="mc-lane mc-lane-ghost">
+        <div class="mc-lane-label">Regulier pad</div>
+        <div class="mc-ghost-track"><div class="mc-arr"></div></div>
+        <div class="mc-ghost-note">loopt direct door</div>
+      </div>`);
+    }
+    parts.push(`<div class="mc-split">${laneHtml.join('')}</div>`);
+  });
+
+  return `<div class="mc-flow">${parts.join('')}</div>`;
+}
+
+function renderMcFlow(proc) {
+  const inner = document.getElementById('mcFlowInner');
+  if (!inner) return;
+  inner.innerHTML = renderMcFlowHtml(proc);
+  const countEl = document.getElementById('mcSearchCount');
+  if (countEl) {
+    const q = mcSearchQuery.trim().toLowerCase();
+    if (!q) { countEl.textContent = ''; }
+    else {
+      const n = proc.fases.reduce((acc, f) => acc + f.vragen.filter(v => v.naam.toLowerCase().includes(q)).length, 0);
+      countEl.textContent = `${n} treffer${n === 1 ? '' : 's'}`;
+    }
+  }
+}
+
+function toggleMcFase(faseNr) {
+  const p = procEntries.find(x => x.id === currentProcId);
+  if (!p || p.type !== 'menscentraal') return;
+  if (mcSearchQuery.trim()) return; // tijdens zoeken bepaalt de zoekterm wat open is
+  if (mcOpenFases.has(faseNr)) mcOpenFases.delete(faseNr);
+  else mcOpenFases.add(faseNr);
+  renderMcFlow(p);
+}
+
+/* Springen vanuit de mini-navigatiebalk: fase openklappen + ernaartoe
+   scrollen (scroll-margin-top op .mc-fase compenseert de sticky balk). */
+function jumpToMcFase(faseNr) {
+  const p = procEntries.find(x => x.id === currentProcId);
+  if (!p || p.type !== 'menscentraal') return;
+  mcOpenFases.add(faseNr);
+  renderMcFlow(p);
+  const target = document.getElementById('mcfase-' + faseNr);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleAllMcFases(mode) {
+  const p = procEntries.find(x => x.id === currentProcId);
+  if (!p || p.type !== 'menscentraal') return;
+  if (mode === 'open') p.fases.forEach(f => mcOpenFases.add(f.nr));
+  else mcOpenFases.clear();
+  renderMcFlow(p);
+}
+
+function onMcSearchInput(value) {
+  const p = procEntries.find(x => x.id === currentProcId);
+  if (!p || p.type !== 'menscentraal') return;
+  mcSearchQuery = value || '';
+  renderMcFlow(p);
+}
+
+/* Toont een proces in het vaste detailpaneel naast de lijst (geen
+   popup meer). Dubbelklik-bestendig: opnieuw klikken op hetzelfde
+   proces bouwt het gewoon opnieuw op, dat is goedkoop genoeg. */
+function selectProcEntry(id) {
+  currentProcId = id;
+  const p = procEntries.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('procDetailEmpty').style.display = 'none';
+  const content = document.getElementById('procDetailContent');
+  content.style.display = 'flex';
+
+  document.getElementById('procDetailTitle').textContent = p.naam;
+  document.getElementById('procDetailTeamBadge').textContent = p.team || '—';
+  document.getElementById('procDetailDesc').textContent = p.desc || '';
+  document.getElementById('procStepDetail').innerHTML = '';
+
+  const flowWrap = document.getElementById('procFlowWrap');
+  const legend = document.getElementById('procDetailLegend');
+  const sub = document.getElementById('procDetailSub');
+  if (p.type === 'menscentraal') {
+    mcOpenFases.clear(); // start altijd overzichtelijk: alle fases dicht
+    mcSearchQuery = '';
+    flowWrap.style.justifyContent = 'stretch';
+    // Belangrijk: géén overflow-x:auto hier — een overflow-container
+    // tussen de sticky toolbar en het scrollende detailpaneel breekt
+    // position:sticky. Horizontaal scrollen gebeurt per .mc-split.
+    flowWrap.style.overflowX = 'visible';
+    flowWrap.innerHTML = `<div class="mc-container">${mcToolbarHtml(p)}<div id="mcFlowInner"></div></div>`;
+    renderMcFlow(p);
+    legend.innerHTML = mcLegendHtml(p);
+    const totalVragen = p.fases.reduce((n, f) => n + f.vragen.length, 0);
+    sub.textContent = `${p.fases.length} zaakstappen · ${totalVragen} vragen — klik op een stap, zoek een vraag of spring via de balk`;
+  } else {
+    flowWrap.style.justifyContent = 'center';
+    flowWrap.style.overflowX = 'auto'; // brede SVG-flows mogen wél horizontaal scrollen
+    const layerMap = computeStepLayers(p.steps);
+    const groups = groupByLayer(p.steps, layerMap);
+    flowWrap.innerHTML = renderProcessFlowSVG(p.steps, layerMap, groups, null);
+    legend.innerHTML = NORMAAL_LEGEND;
+    sub.textContent = `${p.steps.length} stappen`;
+  }
+
+  // Selectie in de lijst zelf ook bijwerken zonder alles opnieuw te
+  // filteren/renderen (voorkomt dat het zoekveld/scrollpositie springt).
+  document.querySelectorAll('#procList .proc-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.id === id);
+  });
+}
+
+function selectProcStep(stapNr) {
+  const p = procEntries.find(x => x.id === currentProcId);
+  if (!p || p.type === 'menscentraal') return;
+  const step = p.steps.find(s => s.stapNr === stapNr);
+  if (!step) return;
+
+  const layerMap = computeStepLayers(p.steps);
+  const groups = groupByLayer(p.steps, layerMap);
+  document.getElementById('procFlowWrap').innerHTML = renderProcessFlowSVG(p.steps, layerMap, groups, stapNr);
+
+  const subHtml = step.stapSub
+    ? `<div style="font-size:.78rem;color:var(--sub);margin-top:2px;">${escHtml(step.stapSub)}</div>`
+    : '';
+
+  const vragenHtml = (step.stapVragen && step.stapVragen.length > 0)
+    ? `<ul style="margin:10px 0 0;padding-left:18px;font-size:.82rem;color:var(--n);line-height:1.7;">
+        ${step.stapVragen.map(v => `<li>${escHtml(v)}</li>`).join('')}
+      </ul>`
+    : '';
+
+  document.getElementById('procStepDetail').innerHTML = `
+    <div class="dash-modal-meta-grid" style="grid-template-columns:1fr;">
+      <div class="meta-item">
+        <div class="meta-key">Stap ${step.stapNr} — ${escHtml(step.stapNaam)}</div>
+        ${subHtml}
+        <div class="meta-val" style="font-weight:400;margin-top:8px;white-space:pre-wrap;">${escHtml(step.stapDesc) || (step.stapVragen.length === 0 ? 'Geen toelichting opgegeven.' : '')}</div>
+        ${vragenHtml}
+      </div>
+    </div>`;
+}
+
+/* ====================================================================
+   VRAAGSTELLER — klik-variant.
+   Doel: van "ik wil iets weten" naar een scherpe, kopieerbare
+   datavraag in vier klikken, met live voorbeeld (fictieve getallen),
+   de geldende definitie, benodigde datavelden en een "dit bestaat
+   al"-check tegen de dashboards. Geen AI, geen server: alles draait
+   op de al geladen Sheets-data.
+   ==================================================================== */
+const VQ_DIMENSIES = [
+  { key: 'geen',        label: 'Geen uitsplitsing', series: ['Totaal'] },
+  { key: 'team',        label: 'Team',              series: ['WMO', 'Jeugd', 'Participatie'] },
+  { key: 'wet',         label: 'Wet',               series: ['Wmo', 'Jeugdwet', 'Participatiewet'] },
+  { key: 'leeftijd',    label: 'Leeftijdsgroep',    series: ['0–17', '18–64', '65+'] },
+  { key: 'kern',        label: 'Kern',              series: ['Medemblik', 'Wognum', 'Wervershoof'] },
+  { key: 'leverancier', label: 'Leverancier',       series: ['Leverancier A', 'Leverancier B', 'Leverancier C'] },
+];
+const VQ_GRAN = [
+  { key: 'maand',    label: 'Per maand',    zin: 'maand' },
+  { key: 'kwartaal', label: 'Per kwartaal', zin: 'kwartaal' },
+  { key: 'jaar',     label: 'Per jaar',     zin: 'jaar' },
+];
+const VQ_SPAN = [
+  { key: '12m',     label: 'Laatste 12 maanden', zin: 'de laatste 12 maanden' },
+  { key: 'ditjaar', label: 'Dit jaar',           zin: 'dit jaar tot nu' },
+  { key: '3jaar',   label: 'Laatste 3 jaar',     zin: 'de laatste 3 jaar' },
+];
+const VQ_VIEWS = [
+  { key: 'auto',  label: 'Automatisch' },
+  { key: 'tabel', label: 'Tabel' },
+  { key: 'lijn',  label: 'Lijngrafiek' },
+  { key: 'staaf', label: 'Staafdiagram' },
+];
+const VQ_COLORS = ['#005496', '#16BECF', '#8DC63F'];
+
+const vqState = { begripId: null, dim: 'geen', gran: 'kwartaal', span: '12m', view: 'auto' };
+
+/* Welke uitsplitsingen zijn voor dit begrip beschikbaar? Nu: de vaste
+   lijst hierboven. Zodra in het Sheet de kolom "Uitsplitsingen" wordt
+   ingevuld voor een begrip (bijv. "team;wet"), toont de Vraagsteller
+   voor dát begrip alleen die opties — zonder codewijziging. */
+function vqDimsFor(entry) {
+  const all = VQ_DIMENSIES;
+  if (!entry || !entry.dimensies || entry.dimensies.length === 0) return all;
+  const wanted = new Set(entry.dimensies);
+  const filtered = all.filter(d => d.key === 'geen' || wanted.has(d.key));
+  return filtered.length > 1 ? filtered : all;
+}
+
+function vqEffectiveView() {
+  if (vqState.view !== 'auto') return vqState.view;
+  return vqState.dim === 'geen' ? 'lijn' : 'staaf';
+}
+
+/* ── Deterministische nepgetallen: zelfde begrip+keuzes = zelfde
+   getallen, zodat de preview niet "flikkert" bij her-render. ──── */
+function vqSeededRandom(seedStr) {
+  let h = 2166136261;
+  for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
+  let s = h >>> 0;
+  return function () {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const VQ_MND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+function vqPeriodLabels() {
+  const now = new Date();
+  const out = [];
+  if (vqState.gran === 'maand') {
+    const n = vqState.span === 'ditjaar' ? now.getMonth() + 1 : 12;
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push(VQ_MND[d.getMonth()] + " '" + String(d.getFullYear()).slice(2));
+    }
+  } else if (vqState.gran === 'kwartaal') {
+    const curQ = Math.floor(now.getMonth() / 3);
+    const n = vqState.span === 'ditjaar' ? curQ + 1 : vqState.span === '3jaar' ? 12 : 4;
+    for (let i = n - 1; i >= 0; i--) {
+      let q = curQ - i, y = now.getFullYear();
+      while (q < 0) { q += 4; y--; }
+      out.push('Q' + (q + 1) + " '" + String(y).slice(2));
+    }
+  } else {
+    const n = vqState.span === 'ditjaar' ? 1 : 3;
+    for (let i = n - 1; i >= 0; i--) out.push(String(now.getFullYear() - i));
+  }
+  return out;
+}
+
+function vqDummySeries(entry) {
+  const dim = VQ_DIMENSIES.find(d => d.key === vqState.dim) || VQ_DIMENSIES[0];
+  const labels = vqPeriodLabels();
+  const rand = vqSeededRandom(`${entry.id}|${vqState.dim}|${vqState.gran}|${vqState.span}`);
+  const series = dim.series.map((name, si) => {
+    const base = 30 + Math.round(rand() * 80);
+    const trend = (rand() - 0.4) * 4;
+    const values = labels.map((_, i) => Math.max(2, Math.round(base + trend * i + (rand() - 0.5) * base * 0.35)));
+    return { name, color: VQ_COLORS[si % VQ_COLORS.length], values };
+  });
+  return { labels, series };
+}
+
+/* ── Voorbeeldvisual: kale inline-SVG (geen libraries), zelfde
+   aanpak als de proces-flowcharts. ─────────────────────────────── */
+function vqChartSVG(labels, series, kind) {
+  const W = 620, H = 240, padL = 16, padR = 16, padT = 16, padB = 32;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxV = Math.max(1, ...series.flatMap(s => s.values)) * 1.12;
+  let out = '';
+  for (let g = 1; g <= 3; g++) {
+    const gy = padT + plotH - (plotH * g) / 3;
+    out += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#EDF1F7" stroke-width="1"/>`;
+  }
+  const n = labels.length;
+  if (kind === 'staaf') {
+    const groupW = plotW / n;
+    const barW = Math.min(34, (groupW * 0.62) / series.length);
+    labels.forEach((_, i) => {
+      const groupX = padL + i * groupW + (groupW - barW * series.length) / 2;
+      series.forEach((s, si) => {
+        const h = (s.values[i] / maxV) * plotH;
+        out += `<rect x="${(groupX + si * barW).toFixed(1)}" y="${(padT + plotH - h).toFixed(1)}" width="${(barW - 2).toFixed(1)}" height="${h.toFixed(1)}" rx="2.5" fill="${s.color}" opacity="0.92"/>`;
+      });
+    });
+  } else {
+    series.forEach(s => {
+      const pts = s.values.map((v, i) => {
+        const x = padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+        const y = padT + plotH - (v / maxV) * plotH;
+        return [x, y];
+      });
+      out += `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round"/>`;
+      pts.forEach(p => { out += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2" fill="#fff" stroke="${s.color}" stroke-width="2"/>`; });
+    });
+  }
+  const step = n > 8 ? Math.ceil(n / 8) : 1;
+  labels.forEach((lbl, i) => {
+    if (i % step !== 0 && i !== n - 1) return;
+    const x = kind === 'staaf'
+      ? padL + i * (plotW / n) + (plotW / n) / 2
+      : padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+    out += `<text x="${x.toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="10.5" fill="#4A6180">${escHtml(lbl)}</text>`;
+  });
+  out += `<line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="#C9D3E0" stroke-width="1.4"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
+}
+
+function vqTableHTML(labels, series) {
+  const head = `<tr><th>Periode</th>${series.map(s => `<th style="text-align:right;">${escHtml(s.name)}</th>`).join('')}</tr>`;
+  const body = labels.map((lbl, i) =>
+    `<tr><td>${escHtml(lbl)}</td>${series.map(s => `<td class="num">${s.values[i]}</td>`).join('')}</tr>`
+  ).join('');
+  return `<table class="vq-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+function vqSentenceParts(entry) {
+  const dim = VQ_DIMENSIES.find(d => d.key === vqState.dim);
+  const gran = VQ_GRAN.find(g => g.key === vqState.gran);
+  const span = VQ_SPAN.find(s => s.key === vqState.span);
+  return { dim, gran, span,
+    text: `Hoeveel ${entry.term.toLowerCase()} per ${gran.zin}` +
+      (vqState.dim !== 'geen' ? `, uitgesplitst naar ${dim.label.toLowerCase()}` : '') +
+      `, over ${span.zin}?` };
+}
+
+function vqCopyText(entry) {
+  const { text } = vqSentenceParts(entry);
+  const viewLabel = { tabel: 'tabel', lijn: 'lijngrafiek', staaf: 'staafdiagram' }[vqEffectiveView()];
+  const velden = (entry.fieldChips || []).map(c => `${c.label} (${c.id})`).join(', ');
+  const lines = [
+    'DATAVRAAG — Definitiecatalogus Sociaal Domein, gemeente Medemblik',
+    '',
+    'Vraag: ' + text,
+    'Gewenste weergave: ' + viewLabel,
+    '',
+    `Definitie: ${entry.id} · ${entry.term} (status: ${entry.status || 'onbekend'})`,
+  ];
+  if (entry.def) lines.push('"' + entry.def.replace(/\s+/g, ' ').slice(0, 400) + (entry.def.length > 400 ? '…"' : '"'));
+  lines.push(velden ? 'Benodigde datavelden: ' + velden : 'Benodigde datavelden: nog niet gekoppeld in de catalogus');
+  return lines.join('\n');
+}
+
+function vqCopy() {
+  const entry = entries.find(e => e.id === vqState.begripId);
+  if (!entry) return;
+  const text = vqCopyText(entry);
+  const done = () => {
+    const btn = document.getElementById('vqCopyBtn');
+    if (!btn) return;
+    btn.classList.add('done');
+    btn.textContent = 'Gekopieerd ✓';
+    setTimeout(() => { if (document.getElementById('vqCopyBtn')) renderVqPreview(); }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => { vqCopyFallback(text); done(); });
+  } else { vqCopyFallback(text); done(); }
+}
+function vqCopyFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* stil */ }
+  document.body.removeChild(ta);
+}
+
+/* ── Renderen ──────────────────────────────────────────────────── */
+function renderVq() {
+  renderVqBegripList();
+  renderVqChips();
+  renderVqPreview();
+}
+
+function renderVqBegripList() {
+  const wrap = document.getElementById('vqBegripList');
+  if (!wrap) return;
+  const q = (document.getElementById('vqSearch').value || '').toLowerCase();
+  const filtered = entries.filter(e => !q || `${e.term} ${e.def} ${e.cat}`.toLowerCase().includes(q));
+  if (filtered.length === 0) {
+    wrap.innerHTML = `<div class="vq-hint" style="padding:20px 12px;">${entries.length === 0 ? 'Data wordt geladen…' : 'Geen begrippen gevonden.'}</div>`;
+    return;
+  }
+  const byCat = new Map();
+  for (const e of filtered) {
+    const cat = e.cat || 'Overig';
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(e);
+  }
+  let html = '';
+  for (const [cat, list] of byCat) {
+    html += `<div class="vq-begrip-cat">${escHtml(cat)}</div>`;
+    html += list.map(e =>
+      `<div class="vq-begrip-row ${e.id === vqState.begripId ? 'sel' : ''}" data-vq-begrip="${escHtml(e.id)}">
+        <span>${hlHtml(e.term, q)}</span>${statusBadgeHtml(e.status)}
+      </div>`).join('');
+  }
+  wrap.innerHTML = html;
+}
+
+function renderVqChips() {
+  const entry = entries.find(e => e.id === vqState.begripId) || null;
+  const dims = vqDimsFor(entry);
+  if (!dims.some(d => d.key === vqState.dim)) vqState.dim = 'geen';
+  const chip = (attr, key, label, sel) =>
+    `<span class="vq-chip ${sel ? 'sel' : ''}" data-${attr}="${key}">${escHtml(label)}</span>`;
+  document.getElementById('vqDims').innerHTML =
+    dims.map(d => chip('vq-dim', d.key, d.label, d.key === vqState.dim)).join('');
+  document.getElementById('vqGran').innerHTML =
+    VQ_GRAN.map(g => chip('vq-gran', g.key, g.label, g.key === vqState.gran)).join('');
+  document.getElementById('vqSpan').innerHTML =
+    VQ_SPAN.map(s => chip('vq-span', s.key, s.label, s.key === vqState.span)).join('');
+  document.getElementById('vqView').innerHTML =
+    VQ_VIEWS.map(v => {
+      const label = v.key === 'auto' ? `Automatisch (${vqState.dim === 'geen' ? 'lijn' : 'staaf'})` : v.label;
+      return chip('vq-view', v.key, label, v.key === vqState.view);
+    }).join('');
+}
+
+function renderVqPreview() {
+  const wrap = document.getElementById('vqPreview');
+  if (!wrap) return;
+  const entry = entries.find(e => e.id === vqState.begripId);
+  if (!entry) {
+    wrap.innerHTML = `<div class="vq-hint">Kies links een begrip om te beginnen.<br>Je ziet hier dan meteen hoe het antwoord op je vraag eruit gaat zien.</div>`;
+    return;
+  }
+
+  const { text } = vqSentenceParts(entry);
+  const sentenceHtml = escHtml(text)
+    .replace(escHtml(entry.term.toLowerCase()), `<b>${escHtml(entry.term.toLowerCase())}</b>`);
+
+  const { labels, series } = vqDummySeries(entry);
+  const view = vqEffectiveView();
+  const visual = view === 'tabel' ? vqTableHTML(labels, series) : vqChartSVG(labels, series, view);
+  const legend = (vqState.dim !== 'geen' && view !== 'tabel')
+    ? `<div class="vq-legend">${series.map(s => `<span><i style="background:${s.color};"></i>${escHtml(s.name)}</span>`).join('')}</div>`
+    : '';
+
+  const veldenHtml = (entry.fieldChips || []).length
+    ? entry.fieldChips.map(c =>
+        `<span class="df-chip catalog df-chip-link" data-dfid="${escHtml(c.id)}" title="Open dit dataveld">${escHtml(c.label)}</span>`).join('')
+    : `<span style="font-style:italic;color:var(--sub);font-size:.7rem;">nog niet gekoppeld in de catalogus</span>`;
+
+  const matches = dashEntries.filter(d => (d.dekt || []).includes(entry.id.toUpperCase()));
+  let dashHtml;
+  if (matches.length) {
+    dashHtml = matches.map(d => `
+      <div class="vq-banner match">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Dit bestaat al: het dashboard "${escHtml(d.name)}" toont ${escHtml(entry.term.toLowerCase())}.</span>
+        <span class="vq-banner-link" data-vq-dash="${escHtml(d.id)}">Bekijk</span>
+      </div>`).join('');
+  } else {
+    dashHtml = `<div class="vq-banner nomatch">Nog geen dashboard gekoppeld aan dit begrip. Stuur je vraag naar het datateam met de kopieer-knop hierboven.</div>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="vq-sentence">
+      <div style="flex:1;">${sentenceHtml}</div>
+      <button class="vq-copy-btn" id="vqCopyBtn" data-vq-copy="1" title="Kopieer de vraag inclusief definitie en datavelden — klaar om te mailen naar het datateam">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg>
+        Kopieer vraag
+      </button>
+    </div>
+    <div class="vq-preview-note">Voorbeeld met fictieve getallen — zo gaat het antwoord op je vraag eruitzien.</div>
+    ${visual}
+    ${legend}
+    <div style="margin-top:16px;">
+      <div class="vq-link-row">
+        <span class="vq-link-key">Definitie</span>
+        <span class="df-chip catalog df-chip-link" data-defid="${escHtml(entry.id)}" title="Open deze definitie">${escHtml(entry.id)} · ${escHtml(entry.term)}</span>
+        ${statusBadgeHtml(entry.status)}
+      </div>
+      <div class="vq-link-row" style="align-items:flex-start;">
+        <span class="vq-link-key" style="margin-top:3px;">Datavelden</span>
+        <span class="data-fields-wrap" style="display:flex;flex-wrap:wrap;gap:5px;">${veldenHtml}</span>
+      </div>
+    </div>
+    ${dashHtml}`;
+}
+
+function openDashFromVq(dashId) {
+  document.getElementById('dashSearch').value = '';
+  document.getElementById('dashFilterType').value = '';
+  document.getElementById('dashFilterTeam').value = '';
+  switchMainTab('dashboards');
+  renderDashTable();
+  selectDashEntry(dashId);
+  scrollRowIntoView('dashTableBody', dashId);
+}
+
+/* ====================================================================
+   TABS
+   ==================================================================== */
+function switchMainTab(tab) {
+  activeMainTab = tab;
+  const views = {
+    vraagsteller: 'view-vraagsteller',
+    definities: 'view-definities',
+    processen: 'view-processen',
+    datavelden: 'view-datavelden',
+    dashboards: 'view-dashboards',
+  };
+  Object.entries(views).forEach(([key, viewId]) => {
+    const el = document.getElementById(viewId);
+    if (!el) return;
+    const isActive = key === tab;
+    if (el.classList.contains('placeholder-view')) {
+      el.classList.toggle('active', isActive);
+    } else if (el.classList.contains('dv-view') || el.classList.contains('dash-view') || el.classList.contains('proc-view')) {
+      el.classList.toggle('active', isActive);
+    } else {
+      el.style.display = isActive ? 'flex' : 'none';
+    }
+  });
+  ['navVraagsteller','navDefinities','navProcessen','navDatavelden','navDashboards'].forEach(navId => {
+    document.getElementById(navId).classList.remove('active');
+  });
+  const navMap = { vraagsteller:'navVraagsteller', definities:'navDefinities', processen:'navProcessen', datavelden:'navDatavelden', dashboards:'navDashboards' };
+  document.getElementById(navMap[tab]).classList.add('active');
+  renderHeaderCounts();
+}
+
+/* ====================================================================
+   CHIP-NAVIGATIE — van definitie naar dataveld en terug
+   ==================================================================== */
+function openDataveldFromChip(dfId) {
+  // Filters/zoek leegmaken zodat het veld gegarandeerd zichtbaar is
+  document.getElementById('dvSearch').value = '';
+  document.getElementById('dvFilterType').value = '';
+  document.getElementById('dvFilterSrc').value = '';
+  switchMainTab('datavelden');
+  renderDvTable();
+  selectDvEntry(dfId);
+  scrollRowIntoView('dvTableBody', dfId);
+}
+
+function openDefinitieFromChip(defId) {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterCat').value = '';
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterTeam').value = '';
+  switchMainTab('definities');
+  renderTable();
+  selectEntry(defId);
+  scrollRowIntoView('tableBody', defId);
+}
+
+function scrollRowIntoView(tbodyId, id) {
+  const row = document.querySelector(`#${tbodyId} tr[data-id="${(window.CSS && CSS.escape) ? CSS.escape(id) : id}"]`);
+  if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+/* ====================================================================
+   EVENT-DELEGATIE — één listener per container in plaats van inline
+   onclick met string-interpolatie. Dit maakt rij-klikken ongevoelig
+   voor rare tekens (aanhalingstekens e.d.) in id's uit het Sheet.
+   ==================================================================== */
+function initInteractions() {
+  const byRow = (tbodyId, fn) => {
+    document.getElementById(tbodyId).addEventListener('click', ev => {
+      if (ev.target.closest('a')) return; // directe links (bijv. dashboard openen) niet als rij-klik behandelen
+      const tr = ev.target.closest('tr[data-id]');
+      if (tr) fn(tr.dataset.id);
+    });
+  };
+  byRow('tableBody', selectEntry);
+  byRow('dvTableBody', selectDvEntry);
+  byRow('dashTableBody', selectDashEntry);
+  document.getElementById('procList').addEventListener('click', ev => {
+    const card = ev.target.closest('[data-id]');
+    if (card) selectProcEntry(card.dataset.id);
+  });
+  document.getElementById('procFlowWrap').addEventListener('click', ev => {
+    const mcJump = ev.target.closest('[data-mcjump]');
+    if (mcJump) { jumpToMcFase(parseInt(mcJump.dataset.mcjump, 10)); return; }
+    const mcAll = ev.target.closest('[data-mcall]');
+    if (mcAll) { toggleAllMcFases(mcAll.dataset.mcall); return; }
+    const mcFase = ev.target.closest('[data-mcfase]');
+    if (mcFase) { toggleMcFase(parseInt(mcFase.dataset.mcfase, 10)); return; }
+    const g = ev.target.closest('[data-stapnr]');
+    if (g) selectProcStep(parseInt(g.dataset.stapnr, 10));
+  });
+  // Zoeken binnen een MensCentraal-proces: input-delegatie zodat de
+  // listener ook werkt nadat het detailpaneel opnieuw is opgebouwd.
+  document.getElementById('procFlowWrap').addEventListener('input', ev => {
+    if (ev.target && ev.target.id === 'mcSearchInput') onMcSearchInput(ev.target.value);
+  });
+  document.getElementById('dFields').addEventListener('click', ev => {
+    const chip = ev.target.closest('[data-dfid]');
+    if (chip) openDataveldFromChip(chip.dataset.dfid);
+  });
+  document.getElementById('dvUsedInList').addEventListener('click', ev => {
+    const chip = ev.target.closest('[data-defid]');
+    if (chip) openDefinitieFromChip(chip.dataset.defid);
+  });
+  // Vraagsteller: één listener voor alle klikbare onderdelen
+  document.getElementById('view-vraagsteller').addEventListener('click', ev => {
+    const t = ev.target;
+    const begrip = t.closest('[data-vq-begrip]');
+    if (begrip) { vqState.begripId = begrip.dataset.vqBegrip; renderVq(); return; }
+    const dim = t.closest('[data-vq-dim]');
+    if (dim) { vqState.dim = dim.dataset.vqDim; renderVqChips(); renderVqPreview(); return; }
+    const gran = t.closest('[data-vq-gran]');
+    if (gran) { vqState.gran = gran.dataset.vqGran; renderVqChips(); renderVqPreview(); return; }
+    const span = t.closest('[data-vq-span]');
+    if (span) { vqState.span = span.dataset.vqSpan; renderVqChips(); renderVqPreview(); return; }
+    const view = t.closest('[data-vq-view]');
+    if (view) { vqState.view = view.dataset.vqView; renderVqChips(); renderVqPreview(); return; }
+    if (t.closest('[data-vq-copy]')) { vqCopy(); return; }
+    const dash = t.closest('[data-vq-dash]');
+    if (dash) { openDashFromVq(dash.dataset.vqDash); return; }
+    const dfChip = t.closest('[data-dfid]');
+    if (dfChip) { openDataveldFromChip(dfChip.dataset.dfid); return; }
+    const defChip = t.closest('[data-defid]');
+    if (defChip) { openDefinitieFromChip(defChip.dataset.defid); return; }
+  });
+}
+
+/* ====================================================================
+   OPSTARTEN
+   ==================================================================== */
+initInteractions();
+loadAllData();
+</script>
+</body>
+</html>
