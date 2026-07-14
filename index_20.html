@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Definitiecatalogus — Sociaal Domein | Gemeente Medemblik</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <img src="https://www.medemblik.nl/fileadmin/user_upload/medemblik-logo.svg" style="height:44px;filter:brightness(0) invert(1)" onerror="this.style.display='none'">
+    <div class="hdr-sep"></div>
+    <div>
+      <div class="t1" style="font-size:1rem;font-weight:700;letter-spacing:-.01em;">Definitiecatalogus — Sociaal Domein</div>
+      <div class="t2" style="font-size:.7rem;margin-top:2px;">Gegevenswoordenboek · Gemeente Medemblik</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="hdr-stat" id="hdrActiveCount">—</span>
+    <button class="hdr-refresh" id="btnRefreshSheets" onclick="loadAllData()" title="Haal de actuele data opnieuw op uit het Google Sheet">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
+      Vernieuw data
+    </button>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-nav-btn" id="navVraagsteller" onclick="switchMainTab('vraagsteller')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    Vraagsteller
+    <span class="tab-nav-new" style="background:rgba(29,158,117,.13);color:#0B6E49;border-color:rgba(29,158,117,.3);">nieuw</span>
+  </button>
+  <button class="tab-nav-btn active" id="navDefinities" onclick="switchMainTab('definities')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+    Definities
+  </button>
+  <button class="tab-nav-btn" id="navProcessen" onclick="switchMainTab('processen')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="M12 7v4M10.5 17.5L7 16M13.5 17.5L17 16"></path></svg>
+    Processen
+  </button>
+  <button class="tab-nav-btn" id="navDatavelden" onclick="switchMainTab('datavelden')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+    Datavelden
+  </button>
+  <button class="tab-nav-btn" id="navDashboards" onclick="switchMainTab('dashboards')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+    Dashboards
+  </button>
+</div>
+
+<div id="dataIssueBanner"></div>
+
+<!-- ============== DEFINITIES ============== -->
+<div id="view-definities" style="flex: 1 1 0px; min-height: 0px; display: flex; flex-direction: column;">
+  <div class="toolbar" style="display: flex;">
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Zoek op term, definitie, dataveld…" oninput="renderTable()" onchange="renderTable()">
+    </div>
+    <select class="fi-sel" id="filterCat" onchange="renderTable()"><option value="">Alle categorieën</option></select>
+    <select class="fi-sel" id="filterStatus" onchange="renderTable()"><option value="">Alle statussen</option></select>
+    <select class="fi-sel" id="filterTeam" onchange="renderTable()"><option value="">Alle teams</option></select>
+    <div class="tb-sep"></div>
+    <span class="dv-count" id="countLabel">— begrippen</span>
+  </div>
+  <div class="main">
+    <div class="tbl-panel">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Term</th>
+              <th style="width:90px;">Categorie</th>
+              <th style="width:90px;">Team</th>
+              <th style="width:80px;">Status</th>
+              <th style="width:64px;">Score</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr class="loading-row"><td colspan="6">Data wordt geladen uit Google Sheets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-empty" id="detailEmpty">
+        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+        <p>Selecteer een begrip om details te zien</p>
+        <span class="detail-empty-hint">Klik op een rij in de tabel aan de linkerkant</span>
+      </div>
+      <div id="detailContent" style="flex:1 1 0;display:none;flex-direction:column;min-height:0;">
+        <div class="detail-scroll">
+          <div class="detail-header">
+            <div style="flex:1;">
+              <div class="detail-id" id="dId"></div>
+              <div class="detail-term" id="dTerm"></div>
+              <div class="detail-badges">
+                <span id="dCatBadge"></span>
+                <span id="dStatusBadge"></span>
+              </div>
+            </div>
+          </div>
+          <div class="detail-section">
+            <div class="section-label">Definitie</div>
+            <div class="detail-text pre-wrap" id="dDef"></div>
+          </div>
+          <div class="detail-section" id="dCtxSection">
+            <div class="section-label">Business context</div>
+            <div class="detail-text pre-wrap" id="dCtx"></div>
+          </div>
+          <div class="detail-section" id="dFieldsSection">
+            <div class="section-label">Benodigde datavelden</div>
+            <div class="data-fields-wrap" id="dFields"></div>
+          </div>
+          <div class="detail-section" id="dFieldsFullSection">
+            <div class="section-label">Velden &amp; berekening</div>
+            <div class="detail-text pre-wrap" id="dFieldsFull"></div>
+          </div>
+          <div class="detail-section" id="dNotesSection">
+            <div class="section-label">Opmerkingen</div>
+            <div class="detail-text pre-wrap" id="dNotes"></div>
+          </div>
+          <div class="detail-meta">
+            <div class="meta-item">
+              <div class="meta-key">Verantwoordelijk team</div>
+              <div class="meta-val" id="dTeam"></div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Datum vastgesteld</div>
+              <div class="meta-val" id="dDate"></div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Categorie</div>
+              <div class="meta-val" id="dCat"></div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-key">Status</div>
+              <div class="meta-val" id="dStatus"></div>
+            </div>
+          </div>
+          <div class="detail-section" id="dImageSection" style="display:none;">
+            <div class="section-label">Afbeelding</div>
+            <div class="detail-image-wrap">
+              <img id="dImage" src="" alt="" onerror="document.getElementById('dImageSection').style.display='none';">
+            </div>
+          </div>
+          <div class="changelog-wrap" id="dChangelogWrap">
+            <div class="changelog-label">Wijzigingshistorie</div>
+            <div class="changelog-list" id="dChangelog"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== PROCESSEN ============== -->
+<div id="view-processen" class="proc-view">
+  <svg class="kringen-bg" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="1400" height="900" fill="#002E56"/>
+    <g opacity="0.5">
+      <circle cx="1200" cy="780" r="40" fill="none" stroke="#16BECF" stroke-width="1.8"/>
+      <circle cx="1200" cy="780" r="80" fill="none" stroke="#16BECF" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="1200" cy="780" r="120" fill="none" stroke="#16BECF" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="1200" cy="780" r="160" fill="none" stroke="#16BECF" stroke-width="0.9" opacity="0.38"/>
+      <circle cx="1200" cy="780" r="200" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.22"/>
+      <clipPath id="cl1-proc"><circle cx="1200" cy="780" r="128"/></clipPath>
+      <g clip-path="url(#cl1-proc)" opacity="0.2" stroke="#16BECF" stroke-width="0.9">
+        <line x1="1050" y1="620" x2="1210" y2="940"/>
+        <line x1="1080" y1="620" x2="1240" y2="940"/>
+        <line x1="1110" y1="620" x2="1270" y2="940"/>
+        <line x1="1140" y1="620" x2="1300" y2="940"/>
+        <line x1="1170" y1="620" x2="1330" y2="940"/>
+      </g>
+    </g>
+    <g opacity="0.45">
+      <circle cx="120" cy="100" r="50" fill="none" stroke="#8DC63F" stroke-width="1.8"/>
+      <circle cx="120" cy="100" r="95" fill="none" stroke="#8DC63F" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="120" cy="100" r="140" fill="none" stroke="#8DC63F" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="120" cy="100" r="185" fill="none" stroke="#8DC63F" stroke-width="0.9" opacity="0.35"/>
+      <circle cx="120" cy="100" r="230" fill="none" stroke="#8DC63F" stroke-width="0.7" opacity="0.2"/>
+      <clipPath id="cl2-proc"><circle cx="120" cy="100" r="148"/></clipPath>
+      <g clip-path="url(#cl2-proc)" opacity="0.18" stroke="#8DC63F" stroke-width="0.9">
+        <line x1="-50" y1="-60" x2="110" y2="260"/>
+        <line x1="-20" y1="-60" x2="140" y2="260"/>
+        <line x1="10"  y1="-60" x2="170" y2="260"/>
+        <line x1="40"  y1="-60" x2="200" y2="260"/>
+        <line x1="70"  y1="-60" x2="230" y2="260"/>
+      </g>
+    </g>
+    <g opacity="0.28">
+      <circle cx="1350" cy="200" r="28" fill="none" stroke="#8DC63F" stroke-width="1.4"/>
+      <circle cx="1350" cy="200" r="55" fill="none" stroke="#8DC63F" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="1350" cy="200" r="82" fill="none" stroke="#8DC63F" stroke-width="0.8" opacity="0.45"/>
+    </g>
+    <g opacity="0.25">
+      <circle cx="80" cy="820" r="35" fill="none" stroke="#16BECF" stroke-width="1.3"/>
+      <circle cx="80" cy="820" r="65" fill="none" stroke="#16BECF" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="80" cy="820" r="95" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.45"/>
+    </g>
+  </svg>
+
+  <div class="proc-content">
+    <div class="proc-toolbar">
+      <div class="dv-search-wrap" style="background:rgba(255,255,255,.97);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="procSearch" placeholder="Zoek proces op naam, team…" oninput="renderProcList()">
+      </div>
+      <select class="dv-fi-sel" id="procFilterType" onchange="renderProcList()" style="background:rgba(255,255,255,.97);">
+        <option value="">Alle typen</option>
+        <option value="menscentraal">MensCentraal</option>
+        <option value="normaal">Normaal</option>
+      </select>
+      <select class="dv-fi-sel" id="procFilterTeam" onchange="renderProcList()" style="background:rgba(255,255,255,.97);"><option value="">Alle teams</option></select>
+      <span class="dv-count" id="procCountLabel" style="color:#fff;">— processen</span>
+    </div>
+    <div class="proc-main">
+      <div class="proc-list-panel" id="procList"></div>
+      <div class="proc-detail-panel" id="procDetailPanel">
+        <div class="proc-detail-empty" id="procDetailEmpty">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="M12 7v4M10.5 17.5L7 16M13.5 17.5L17 16"></path></svg>
+          <p>Selecteer een proces</p>
+          <span class="detail-empty-hint">Klik op een proces in de lijst hiernaast</span>
+        </div>
+        <div id="procDetailContent" style="display:none;flex:1;min-height:0;flex-direction:column;">
+          <div class="proc-detail-header">
+            <span class="bdg bdg-leeg" id="procDetailTeamBadge"></span>
+            <div class="dash-modal-title" id="procDetailTitle"></div>
+            <div class="proc-modal-sub" id="procDetailSub"></div>
+          </div>
+          <div class="detail-text" id="procDetailDesc"></div>
+          <div class="proc-legend" id="procDetailLegend"></div>
+          <div id="procFlowWrap" style="display:flex;justify-content:center;padding:8px 0;"></div>
+          <div id="procStepDetail"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== VRAAGSTELLER (placeholder) ============== -->
+<div id="view-vraagsteller" class="proc-view">
+  <svg class="kringen-bg" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="1400" height="900" fill="#002E56"/>
+    <g opacity="0.5">
+      <circle cx="1200" cy="780" r="40" fill="none" stroke="#16BECF" stroke-width="1.8"/>
+      <circle cx="1200" cy="780" r="80" fill="none" stroke="#16BECF" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="1200" cy="780" r="120" fill="none" stroke="#16BECF" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="1200" cy="780" r="160" fill="none" stroke="#16BECF" stroke-width="0.9" opacity="0.38"/>
+      <circle cx="1200" cy="780" r="200" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.22"/>
+      <clipPath id="cl1-vq"><circle cx="1200" cy="780" r="128"/></clipPath>
+      <g clip-path="url(#cl1-vq)" opacity="0.2" stroke="#16BECF" stroke-width="0.9">
+        <line x1="1050" y1="620" x2="1210" y2="940"/>
+        <line x1="1080" y1="620" x2="1240" y2="940"/>
+        <line x1="1110" y1="620" x2="1270" y2="940"/>
+        <line x1="1140" y1="620" x2="1300" y2="940"/>
+        <line x1="1170" y1="620" x2="1330" y2="940"/>
+      </g>
+    </g>
+    <g opacity="0.45">
+      <circle cx="120" cy="100" r="50" fill="none" stroke="#8DC63F" stroke-width="1.8"/>
+      <circle cx="120" cy="100" r="95" fill="none" stroke="#8DC63F" stroke-width="1.4" opacity="0.75"/>
+      <circle cx="120" cy="100" r="140" fill="none" stroke="#8DC63F" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="120" cy="100" r="185" fill="none" stroke="#8DC63F" stroke-width="0.9" opacity="0.35"/>
+      <circle cx="120" cy="100" r="230" fill="none" stroke="#8DC63F" stroke-width="0.7" opacity="0.2"/>
+      <clipPath id="cl2-vq"><circle cx="120" cy="100" r="148"/></clipPath>
+      <g clip-path="url(#cl2-vq)" opacity="0.18" stroke="#8DC63F" stroke-width="0.9">
+        <line x1="-50" y1="-60" x2="110" y2="260"/>
+        <line x1="-20" y1="-60" x2="140" y2="260"/>
+        <line x1="10"  y1="-60" x2="170" y2="260"/>
+        <line x1="40"  y1="-60" x2="200" y2="260"/>
+        <line x1="70"  y1="-60" x2="230" y2="260"/>
+      </g>
+    </g>
+    <g opacity="0.28">
+      <circle cx="1350" cy="200" r="28" fill="none" stroke="#8DC63F" stroke-width="1.4"/>
+      <circle cx="1350" cy="200" r="55" fill="none" stroke="#8DC63F" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="1350" cy="200" r="82" fill="none" stroke="#8DC63F" stroke-width="0.8" opacity="0.45"/>
+    </g>
+    <g opacity="0.25">
+      <circle cx="80" cy="820" r="35" fill="none" stroke="#16BECF" stroke-width="1.3"/>
+      <circle cx="80" cy="820" r="65" fill="none" stroke="#16BECF" stroke-width="1.0" opacity="0.7"/>
+      <circle cx="80" cy="820" r="95" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.45"/>
+    </g>
+  </svg>
+  <div class="proc-content">
+    <div>
+      <div style="font-weight:800;color:#fff;font-size:1.05rem;">Stel je datavraag samen</div>
+      <div style="color:rgba(255,255,255,.68);font-size:.76rem;max-width:660px;line-height:1.6;margin-top:4px;">Klik in vier stappen naar een scherpe datavraag. Rechts zie je meteen een voorbeeld van het antwoord (met fictieve getallen), de geldende definitie, de benodigde datavelden en of er al een dashboard bestaat dat dit toont.</div>
+    </div>
+    <div class="vq-grid">
+      <div class="vq-panel">
+        <div class="vq-step-label"><span class="vq-step-nr">1</span>Wat wil je weten?</div>
+        <div class="dv-search-wrap" style="width:100%;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="vqSearch" placeholder="Zoek een begrip…" oninput="renderVqBegripList()">
+        </div>
+        <div class="vq-begrip-list" id="vqBegripList"></div>
+        <div class="vq-step-label"><span class="vq-step-nr">2</span>Uitgesplitst naar</div>
+        <div class="vq-chips" id="vqDims"></div>
+        <div class="vq-step-label"><span class="vq-step-nr">3</span>Periode</div>
+        <div class="vq-chips" id="vqGran" style="margin-bottom:6px;"></div>
+        <div class="vq-chips" id="vqSpan"></div>
+        <div class="vq-step-label"><span class="vq-step-nr">4</span>Weergave</div>
+        <div class="vq-chips" id="vqView"></div>
+      </div>
+      <div class="vq-panel" id="vqPreview"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== DATAVELDEN ============== -->
+<div id="view-datavelden" class="dv-view">
+
+  <div class="dv-toolbar">
+    <div class="dv-search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="dvSearch" placeholder="Zoek op naam, brontabel, type…" oninput="renderDvTable()" onchange="renderDvTable()">
+    </div>
+    <select class="dv-fi-sel" id="dvFilterType" onchange="renderDvTable()"><option value="">Alle typen</option></select>
+    <select class="dv-fi-sel" id="dvFilterSrc" onchange="renderDvTable()"><option value="">Alle bronnen</option></select>
+    <div class="tb-sep"></div>
+    <span class="dv-count" id="dvCountLabel">— velden</span>
+  </div>
+  <div class="dv-main">
+    <div class="dv-tbl-panel">
+      <div class="dv-tbl-wrap">
+        <table class="dv-table">
+          <thead>
+            <tr>
+              <th style="width:68px;">ID</th>
+              <th>Veldnaam</th>
+              <th style="width:90px;">Type</th>
+              <th style="width:150px;">Brontabel</th>
+              <th>Beschrijving</th>
+            </tr>
+          </thead>
+          <tbody id="dvTableBody">
+            <tr class="loading-row"><td colspan="5">Data wordt geladen uit Google Sheets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dv-detail-panel" id="dvDetailPanel">
+      <div class="dv-detail-empty" id="dvDetailEmpty">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+        <p>Selecteer een dataveld</p>
+        <span>Klik op een rij in de tabel</span>
+      </div>
+      <div class="dv-detail-content" id="dvDetailContent">
+        <div class="dv-detail-header">
+          <div>
+            <div class="dv-detail-id" id="dvId"></div>
+            <div class="dv-detail-name" id="dvName"></div>
+            <div class="dv-detail-badges">
+              <span class="dtype-badge" id="dvTypeBadge"></span>
+            </div>
+          </div>
+        </div>
+        <div class="dv-section">
+          <div class="dv-section-label">Beschrijving</div>
+          <div class="dv-section-text pre-wrap" id="dvDesc"></div>
+        </div>
+        <div class="dv-meta">
+          <div class="dv-meta-item">
+            <div class="meta-key">Brontabel</div>
+            <div class="meta-val" id="dvSrc"></div>
+          </div>
+          <div class="dv-meta-item">
+            <div class="meta-key">Kolomnaam</div>
+            <div class="meta-val" id="dvCol"></div>
+          </div>
+        </div>
+        <div class="dv-section" id="dvValuesSection">
+          <div class="dv-section-label">Mogelijke waarden</div>
+          <div class="dv-values-list" id="dvValuesList"></div>
+        </div>
+        <div class="dv-section" id="dvUsedInSection" style="display:none;">
+          <div class="dv-section-label">Gebruikt in definities</div>
+          <div class="data-fields-wrap" id="dvUsedInList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== DASHBOARDS ============== -->
+<div class="dash-view" id="view-dashboards">
+  <div class="dash-toolbar">
+    <div class="dv-search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="dashSearch" placeholder="Zoek dashboard op naam, team, type…" oninput="renderDashTable()">
+    </div>
+    <select class="dv-fi-sel" id="dashFilterType" onchange="renderDashTable()">
+      <option value="">Intern &amp; Extern</option>
+      <option value="intern">Intern</option>
+      <option value="extern">Extern</option>
+    </select>
+    <select class="dv-fi-sel" id="dashFilterTeam" onchange="renderDashTable()"><option value="">Alle teams</option></select>
+    <div class="tb-sep"></div>
+    <span class="dv-count" id="dashCountLabel">— dashboards</span>
+  </div>
+  <div class="dash-main">
+    <div class="dash-tbl-panel" style="flex:1 1 auto;max-width:none;">
+      <div class="dash-tbl-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th style="width:60px;">ID</th>
+              <th>Naam</th>
+              <th style="width:70px;">Type</th>
+              <th style="width:140px;">Team</th>
+              <th style="width:130px;">Locatie</th>
+              <th style="width:100px;">Bijgewerkt</th>
+              <th style="width:56px;"></th>
+            </tr>
+          </thead>
+          <tbody id="dashTableBody">
+            <tr class="loading-row"><td colspan="7">Data wordt geladen uit Google Sheets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard detail-popup -->
+<div class="dash-modal-overlay" id="dashModalOverlay" onclick="if(event.target===this) closeDashModal()">
+  <div class="dash-modal">
+    <div class="dash-modal-hdr">
+      <div>
+        <span class="dash-badge" id="dashModalTypeBadge"></span>
+        <div class="dash-modal-title" id="dashModalTitle" style="margin-top:8px;"></div>
+      </div>
+      <button class="dash-modal-close" onclick="closeDashModal()" title="Sluiten">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="dash-modal-body">
+      <div>
+        <div class="section-label">Beschrijving</div>
+        <div class="detail-text pre-wrap" id="dashModalDesc"></div>
+      </div>
+      <div class="dash-modal-meta-grid">
+        <div class="meta-item">
+          <div class="meta-key">Team</div>
+          <div class="meta-val" id="dashModalTeam"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Locatie</div>
+          <div class="meta-val" id="dashModalLoc"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Bijgewerkt</div>
+          <div class="meta-val" id="dashModalUpdated"></div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">ID</div>
+          <div class="meta-val" id="dashModalId"></div>
+        </div>
+      </div>
+      <div id="dashModalLinkWrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ftr">
+  <span>Gemeente Medemblik · www.medemblik.nl · Sociaal Domein</span>
+  <span><a href="https://jortarie.github.io/definitiecatalogus-medemblik/" target="_blank" style="color: rgba(255, 255, 255, 0.45); text-decoration: none; font-size: 0.6rem;" onmouseover="this.style.color='#7EEAF3'" onmouseout="this.style.color='rgba(255,255,255,.45)'">jortarie.github.io/definitiecatalogus-medemblik</a></span>
+  <span id="ftrDate"></span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
