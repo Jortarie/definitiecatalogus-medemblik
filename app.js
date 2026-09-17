@@ -98,13 +98,6 @@ const COLOR_MAP = {
   red:    {bg:'#FAECE7', color:'#993C1D'},
   gray:   {bg:'#F2F5F9', color:'#4A6180'},
 };
-const CAT_COLORS = {
-  'Toegang': 'orange',
-  'In/Uitstroom': 'teal',
-  'Wachtlijst': 'green',
-  'Beslistermijn': 'orange',
-  'Trajecten/Producten': 'red',
-};
 const STATUS_BADGE_CLASS = {
   'Vastgesteld': 'bdg-vastgesteld',
   'Definitie en context controleren': 'bdg-review',
@@ -112,10 +105,12 @@ const STATUS_BADGE_CLASS = {
   'Vervallen': 'bdg-vervallen',
 };
 
+/* Categorie krijgt bewust geen eigen kleur per categorie meer (dat was
+   voorbehouden aan Status) — één neutrale grijze pill voor elke
+   categorie, puur als label. */
 function catPillHtml(cat) {
   if (!cat) return '<span class="bdg bdg-leeg">—</span>';
-  const colorKey = CAT_COLORS[cat] || 'gray';
-  const c = COLOR_MAP[colorKey];
+  const c = COLOR_MAP.gray;
   return `<span class="cat-pill" style="background:${c.bg};color:${c.color};">${escHtml(cat)}</span>`;
 }
 function statusBadgeHtml(status) {
@@ -145,17 +140,6 @@ function hlHtml(str, q) {
     i = idx + q.length;
   }
   return out;
-}
-
-/* ── Volledigheidscore — zelfde formule als origineel app.js ──────── */
-function completenessScore(e) {
-  const fields = [e.term, e.def, e.cat, e.team, e.status, e.fields || (e.fieldChips && e.fieldChips.length ? 'x' : '')];
-  const filled = fields.filter(f => f && String(f).trim() && String(f).trim() !== '—').length;
-  return Math.round((filled / fields.length) * 100);
-}
-function scoreHtml(pct) {
-  const color = pct >= 80 ? '#1D9E75' : pct >= 50 ? '#EF9F27' : '#E24B4A';
-  return `<div class="score-bar-wrap"><div class="score-bar"><div class="score-bar-fill" style="width:${pct}%;background:${color};"></div></div><span class="score-pct" style="color:${color};">${pct}%</span></div>`;
 }
 
 /* ====================================================================
@@ -603,13 +587,11 @@ function renderTable() {
 
   const tbody = document.getElementById('tableBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr class="loading-row"><td colspan="6">Geen begrippen gevonden.</td></tr>`;
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="4">Geen begrippen gevonden.</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(e => {
-    const pct = completenessScore(e);
     return `<tr data-id="${escHtml(e.id)}" class="${e.id===currentId?'selected':''}">
-      <td class="id-cell">${hlHtml(e.id, q)}</td>
       <td>
         <div class="term-cell">${hlHtml(e.term, q)}</div>
         <div class="def-preview">${hlHtml(e.def, q)}</div>
@@ -617,7 +599,6 @@ function renderTable() {
       <td class="cat-cell">${catPillHtml(e.cat)}</td>
       <td style="font-size:.63rem;color:var(--sub);white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;">${escHtml(e.team)}</td>
       <td>${statusBadgeHtml(e.status)}</td>
-      <td class="score-td">${scoreHtml(pct)}</td>
     </tr>`;
   }).join('');
 }
@@ -630,7 +611,6 @@ function selectEntry(id) {
   document.getElementById('detailEmpty').style.display = 'none';
   document.getElementById('detailContent').style.display = 'flex';
 
-  document.getElementById('dId').textContent = e.id;
   document.getElementById('dTerm').textContent = e.term;
   document.getElementById('dCatBadge').innerHTML = catPillHtml(e.cat);
   document.getElementById('dStatusBadge').innerHTML = statusBadgeHtml(e.status);
@@ -719,12 +699,11 @@ function renderDvTable() {
 
   const tbody = document.getElementById('dvTableBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr class="loading-row"><td colspan="5">Geen datavelden gevonden.</td></tr>`;
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="4">Geen datavelden gevonden.</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(d => `
     <tr data-id="${escHtml(d.id)}" class="${d.id===currentDvId?'selected':''}">
-      <td class="dv-id">${hlHtml(d.id, q)}</td>
       <td><span class="dv-name">${hlHtml(d.name, q)}</span></td>
       <td><span class="dtype-badge ${dtypeClass(d.type)}">${escHtml(d.type)}</span></td>
       <td class="dv-src">${hlHtml(d.src, q)}</td>
@@ -741,7 +720,6 @@ function selectDvEntry(id) {
   document.getElementById('dvDetailEmpty').style.display = 'none';
   document.getElementById('dvDetailContent').style.display = 'flex';
 
-  document.getElementById('dvId').textContent = d.id;
   document.getElementById('dvName').textContent = d.name;
   const badge = document.getElementById('dvTypeBadge');
   badge.className = `dtype-badge ${dtypeClass(d.type)}`;
@@ -813,12 +791,11 @@ function renderDashTable() {
 
   const tbody = document.getElementById('dashTableBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr class="loading-row"><td colspan="7">Geen dashboards gevonden.</td></tr>`;
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="6">Geen dashboards gevonden.</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(d => `
     <tr data-id="${escHtml(d.id)}" class="${d.id===currentDashId?'selected':''}">
-      <td class="dash-id">${hlHtml(d.id, q)}</td>
       <td class="dash-name">${hlHtml(d.name, q)}</td>
       <td><span class="dash-badge ${dashTypeClass(d.type)}">${escHtml(d.type)}</span></td>
       <td class="dash-team">${hlHtml(d.team, q)}</td>
@@ -848,7 +825,6 @@ function openDashModal(d) {
   document.getElementById('dashModalTeam').textContent = d.team || '—';
   document.getElementById('dashModalLoc').textContent = d.loc || '—';
   document.getElementById('dashModalUpdated').textContent = d.updated || '—';
-  document.getElementById('dashModalId').textContent = d.id;
 
   const linkWrap = document.getElementById('dashModalLinkWrap');
   linkWrap.innerHTML = safeLink(d.link) ? `<a class="dash-cta" href="${escHtml(safeLink(d.link))}" target="_blank" rel="noopener">
