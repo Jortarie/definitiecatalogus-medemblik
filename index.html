@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Datacatalogus Sociaal Domein | Gemeente Medemblik</title>
+<title>Definitiecatalogus Sociaal Domein | Gemeente Medemblik</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -68,16 +68,14 @@
         <table>
           <thead>
             <tr>
-              <th>ID</th>
               <th>Term</th>
               <th style="width:90px;">Categorie</th>
               <th style="width:90px;">Team</th>
               <th style="width:80px;">Status</th>
-              <th style="width:64px;">Score</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr class="loading-row"><td colspan="6">Data wordt geladen uit Google Sheets…</td></tr>
+            <tr class="loading-row"><td colspan="4">Data wordt geladen uit Google Sheets…</td></tr>
           </tbody>
         </table>
       </div>
@@ -92,7 +90,6 @@
         <div class="detail-scroll">
           <div class="detail-header">
             <div style="flex:1;">
-              <div class="detail-id" id="dId"></div>
               <div class="detail-term" id="dTerm"></div>
               <div class="detail-badges">
                 <span id="dCatBadge"></span>
@@ -243,7 +240,7 @@
 
   <div class="proc-content home-content">
     <div class="home-hero">
-      <div class="home-title">Datacatalogus Sociaal Domein</div>
+      <div class="home-title">Definitiecatalogus Sociaal Domein</div>
       <div class="home-sub">Eén centrale plek voor de betekenis van begrippen binnen het sociaal domein, de processen waarin ze gebruikt worden, de onderliggende datavelden en de dashboards die er al op gebouwd zijn.</div>
 
       <div class="home-search-wrap">
@@ -335,7 +332,6 @@
         <table class="dv-table">
           <thead>
             <tr>
-              <th style="width:68px;">ID</th>
               <th>Veldnaam</th>
               <th style="width:90px;">Type</th>
               <th style="width:150px;">Brontabel</th>
@@ -343,7 +339,7 @@
             </tr>
           </thead>
           <tbody id="dvTableBody">
-            <tr class="loading-row"><td colspan="5">Data wordt geladen uit Google Sheets…</td></tr>
+            <tr class="loading-row"><td colspan="4">Data wordt geladen uit Google Sheets…</td></tr>
           </tbody>
         </table>
       </div>
@@ -357,7 +353,6 @@
       <div class="dv-detail-content" id="dvDetailContent">
         <div class="dv-detail-header">
           <div>
-            <div class="dv-detail-id" id="dvId"></div>
             <div class="dv-detail-name" id="dvName"></div>
             <div class="dv-detail-badges">
               <span class="dtype-badge" id="dvTypeBadge"></span>
@@ -413,7 +408,6 @@
         <table class="dash-table">
           <thead>
             <tr>
-              <th style="width:60px;">ID</th>
               <th>Naam</th>
               <th style="width:70px;">Type</th>
               <th style="width:140px;">Team</th>
@@ -423,7 +417,7 @@
             </tr>
           </thead>
           <tbody id="dashTableBody">
-            <tr class="loading-row"><td colspan="7">Data wordt geladen uit Google Sheets…</td></tr>
+            <tr class="loading-row"><td colspan="6">Data wordt geladen uit Google Sheets…</td></tr>
           </tbody>
         </table>
       </div>
@@ -460,10 +454,6 @@
         <div class="meta-item">
           <div class="meta-key">Bijgewerkt</div>
           <div class="meta-val" id="dashModalUpdated"></div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-key">ID</div>
-          <div class="meta-val" id="dashModalId"></div>
         </div>
       </div>
       <div id="dashModalLinkWrap"></div>
