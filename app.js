@@ -1625,6 +1625,29 @@ function openDashFromHome(id) {
 }
 
 /* ====================================================================
+   URL-ROUTING — elk tabblad krijgt een eigen pad (bijv. /definities) in
+   de adresbalk, zodat verversen op dat pad je niet terugstuurt naar
+   Home. GitHub Pages is een statische host: een directe request naar
+   /definities bestaat niet als bestand, dus 404.html vangt dat op en
+   stuurt door naar index.html met het gevraagde pad bewaard — zie de
+   inline restore-script bovenaan index.html die dat pad weer terugzet
+   vóórdat deze code draait.
+   ==================================================================== */
+const BASE_PATH = '/definitiecatalogus-medemblik';
+const TAB_SLUGS = { home: '', definities: 'definities', processen: 'processen', datavelden: 'datavelden', dashboards: 'dashboards' };
+const SLUG_TABS = Object.fromEntries(Object.entries(TAB_SLUGS).filter(([k]) => k !== 'home').map(([k, v]) => [v, k]));
+
+function urlForTab(tab) {
+  return BASE_PATH + '/' + (TAB_SLUGS[tab] || '');
+}
+function tabFromLocation() {
+  let path = location.pathname;
+  if (path.indexOf(BASE_PATH) === 0) path = path.slice(BASE_PATH.length);
+  path = path.replace(/^\/+|\/+$/g, '');
+  return SLUG_TABS[path] || 'home';
+}
+
+/* ====================================================================
    TABS
    ==================================================================== */
 function switchMainTab(tab) {
@@ -1654,6 +1677,10 @@ function switchMainTab(tab) {
   const navMap = { home:'navHome', definities:'navDefinities', processen:'navProcessen', datavelden:'navDatavelden', dashboards:'navDashboards' };
   document.getElementById(navMap[tab]).classList.add('active');
   renderHeaderCounts();
+  const newUrl = urlForTab(tab);
+  if (location.pathname !== newUrl) {
+    history.pushState({ tab }, '', newUrl);
+  }
 }
 
 /* ====================================================================
@@ -1749,6 +1776,16 @@ function initInteractions() {
    OPSTARTEN
    ==================================================================== */
 window.addEventListener('resize', () => { if (procZoom === 'fit') applyProcZoom(); });
+
+// Terug/vooruit-knop van de browser: tabblad volgen zonder een nieuwe
+// history-entry te pushen (die staat er al, dat deed pushState eerder).
+window.addEventListener('popstate', () => {
+  switchMainTab(tabFromLocation());
+});
+
+// Open bij het laden meteen het tabblad dat bij de URL hoort (bijv. na
+// een refresh op /definities, of via de 404.html-doorstuurtruc).
+switchMainTab(tabFromLocation());
 
 initInteractions();
 loadAllData();
