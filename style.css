@@ -12,8 +12,6 @@ body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:var(--lg);color
 .hdr-l{display:flex;align-items:center;gap:16px;}
 .hdr-sep{width:1px;height:36px;background:rgba(255,255,255,.2);}
 .t1{color:#fff;font-size:1.15rem;font-weight:700;}
-.t2{color:var(--zb);font-size:.78rem;margin-top:3px;}
-.hdr-badge{background:rgba(22,190,207,.15);color:#7EEAF3;border:1px solid rgba(22,190,207,.3);padding:4px 12px;border-radius:16px;font-size:.64rem;font-weight:700;}
 
 /* Toolbar */
 .toolbar{height:56px;flex:0 0 56px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 18px;gap:12px;}
@@ -117,18 +115,14 @@ tbody td{padding:7px 10px;border-bottom:1px solid var(--bd);vertical-align:top;c
 .btn-cancel{font-family:inherit;font-size:.72rem;font-weight:600;background:var(--w);color:var(--sub);border:1.5px solid var(--bd);border-radius:8px;padding:8px 16px;cursor:pointer;transition:all .15s;}
 .btn-cancel:hover{border-color:var(--s);color:var(--s);}
 
-/* Tab nav */
-.tab-nav{height:52px;flex:0 0 52px;background:var(--w);border-bottom:2px solid var(--bd);display:flex;align-items:flex-end;padding:0 18px;gap:4px;}
-.tab-nav-btn{font-family:inherit;font-size:.85rem;font-weight:700;color:var(--sub);background:none;border:none;border-bottom:3px solid transparent;padding:10px 22px;margin-bottom:-2px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:color .15s,border-color .15s;}
-.tab-nav-btn:hover:not(.active){color:var(--n);}
-/* Tab-specific active colors */
-#navDefinities.active{color:var(--s);border-bottom-color:var(--s);}
-#navProcessen.active{color:#0C6E78;border-bottom-color:var(--zb);}
-#navDatavelden.active{color:#3B6D11;border-bottom-color:var(--g);}
-#navDashboards.active{color:var(--s);border-bottom-color:var(--s);}
-#navHome.active{color:var(--s);border-bottom-color:var(--s);}
-/* Tab top-bar accent strip when active */
-.tab-nav-btn{position:relative;}
+/* Tab nav — zit sinds ronde 3 in de kopbalk (.hdr-nav/.hdr-nav-btn
+   hieronder); elke tab behoudt hier wel zijn eigen accentkleur voor de
+   actieve tekst, zelfde kleuren als de rest van de app. */
+#navDefinities.active{color:var(--s);}
+#navProcessen.active{color:var(--zb);}
+#navDatavelden.active{color:var(--g);}
+#navDashboards.active{color:var(--s);}
+#navHome.active{color:var(--s);}
 
 /* Processen view */
 .proc-view{display:none;flex:1 1 0;min-height:0;flex-direction:column;}
@@ -809,3 +803,29 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
 .mc-detail-title{font-size:.9rem;font-weight:800;color:var(--n);}
 .mc-detail-cat{font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid;border-radius:8px;padding:2px 8px;}
 .mc-detail .mc-paden{padding:11px 0 0;background:transparent;border-top:1px dashed var(--bd);margin-top:12px;}
+
+/* ===================================================================
+   Samengevoegde kopbalk + platte Processen-achtergrond (17 sept 2026,
+   ronde 3) — vervangt de losse witte tab-nav-rij en het navy
+   kringen-vlak op Processen, voor een compactere, consistentere UI.
+   =================================================================== */
+
+/* Samengevoegde kopbalk: logo + naam + tabs + vernieuw-knop in één balk,
+   de aparte witte tab-nav-rij vervalt. */
+.hdr-merged{height:64px;flex:0 0 64px;gap:28px;}
+.hdr-merged .hdr-l{flex-shrink:0;}
+.hdr-merged .hdr-sep{height:28px;}
+
+.hdr-nav{display:flex;align-items:center;gap:2px;flex:1;height:100%;}
+.hdr-nav-btn{font-family:inherit;font-size:.8rem;font-weight:700;color:rgba(255,255,255,.62);background:none;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:color .15s,background .15s;}
+.hdr-nav-btn:hover:not(.active){color:#fff;background:rgba(255,255,255,.07);}
+.hdr-nav-btn.active{color:#fff;background:rgba(255,255,255,.14);}
+
+/* Processen zonder het navy kringen-motief — zelfde platte, lichte
+   basis als Definities/Datavelden, voor visuele consistentie. */
+.proc-view-flat{background:var(--lg);}
+.proc-view-flat .proc-toolbar{background:var(--w);border-bottom:1px solid var(--bd);height:56px;flex:0 0 56px;padding:0 18px;margin:0;}
+.proc-view-flat .proc-content{padding:20px 28px 28px;}
+.proc-view-flat .dv-search-wrap{background:var(--lg) !important;}
+.proc-view-flat .dv-fi-sel{background:var(--w) !important;}
+.proc-view-flat #procCountLabel{color:var(--sub) !important;}
