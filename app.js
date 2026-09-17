@@ -570,16 +570,6 @@ function notifyDataLoaded() {
 let activeMainTab = 'home'; // gesynchroniseerd met switchMainTab
 
 function renderHeaderCounts() {
-  const el = document.getElementById('hdrActiveCount');
-  const total = entries.length + dvEntries.length + procEntries.length + dashEntries.length;
-  const labels = {
-    home: total ? `${total} items in de catalogus` : '',
-    definities: `${entries.length} begrippen`,
-    datavelden: `${dvEntries.length} velden`,
-    dashboards: `${dashEntries.length} dashboards`,
-    processen: `${procEntries.length} processen`,
-  };
-  el.textContent = labels[activeMainTab] || '';
   document.getElementById('ftrDate').textContent = 'Live uit Google Sheets · ' + new Date().toLocaleDateString('nl-NL', {day:'numeric', month:'long', year:'numeric'});
 }
 
