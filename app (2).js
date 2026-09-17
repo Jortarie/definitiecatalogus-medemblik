@@ -205,8 +205,8 @@ function mapDefinitiesRows(records) {
       source: r.Source || '', changelog: decodeJsonField(r.Wijzigingshistorie, []),
       image: (r.Afbeelding || '').trim(),
       // Optionele kolom "Uitsplitsingen" (;-gescheiden, bijv. "team;wet"):
-      // bepaalt welke uitsplitsingen de Vraagsteller voor dit begrip
-      // aanbiedt. Leeg of afwezig = de vaste standaardlijst.
+      // nog niet gebruikt in de huidige weergave, maar blijft
+      // meegelezen zodat een toekomstige uitsplitsing er zo bij kan.
       dimensies: (r.Uitsplitsingen || '').split(';').map(s => s.trim().toLowerCase()).filter(Boolean),
     });
   }
@@ -262,8 +262,7 @@ function mapDashboardsRows(records) {
       id, name: r.Naam || '', type: (r.type || '').trim(), desc: decodeText(r.Beschrijving),
       loc: r.Locatie || '', team: (r.team || '').trim(), link: r.link || '', updated: r.updated || '',
       // Optionele kolom "Begrippen" (;-gescheiden D-ids, bijv. "D-001;D-014"):
-      // welke definities dit dashboard al toont. Gebruikt door de
-      // Vraagsteller voor de "dit bestaat al"-melding.
+      // welke definities dit dashboard al toont.
       dekt: (r.Begrippen || '').split(';').map(s => s.trim().toUpperCase()).filter(Boolean),
     });
   }
@@ -565,19 +564,20 @@ function notifyDataLoaded() {
   renderDvTable();
   renderDashTable();
   renderProcList();
-  renderVq();
+  renderHome();
 }
 
-let activeMainTab = 'definities'; // gesynchroniseerd met switchMainTab
+let activeMainTab = 'home'; // gesynchroniseerd met switchMainTab
 
 function renderHeaderCounts() {
   const el = document.getElementById('hdrActiveCount');
+  const total = entries.length + dvEntries.length + procEntries.length + dashEntries.length;
   const labels = {
+    home: total ? `${total} items in de catalogus` : '',
     definities: `${entries.length} begrippen`,
     datavelden: `${dvEntries.length} velden`,
     dashboards: `${dashEntries.length} dashboards`,
     processen: `${procEntries.length} processen`,
-    vraagsteller: '',
   };
   el.textContent = labels[activeMainTab] || '';
   document.getElementById('ftrDate').textContent = 'Live uit Google Sheets · ' + new Date().toLocaleDateString('nl-NL', {day:'numeric', month:'long', year:'numeric'});
@@ -1531,336 +1531,131 @@ function selectProcStep(stapNr) {
 }
 
 /* ====================================================================
-   VRAAGSTELLER — klik-variant.
-   Doel: van "ik wil iets weten" naar een scherpe, kopieerbare
-   datavraag in vier klikken, met live voorbeeld (fictieve getallen),
-   de geldende definitie, benodigde datavelden en een "dit bestaat
-   al"-check tegen de dashboards. Geen AI, geen server: alles draait
-   op de al geladen Sheets-data.
+   HOME — startpagina van de catalogus.
+   Doel: één plek van waaruit je meteen naar Definities, Processen,
+   Datavelden of Dashboards kunt, met een catalogusbrede zoekbalk die
+   over alle vier datasets zoekt en direct doorlinkt naar het juiste
+   resultaat (zelfde open-functies als de kruisverwijzingen elders in
+   de app: openDefinitieFromChip, openDataveldFromChip, enz.).
    ==================================================================== */
-const VQ_DIMENSIES = [
-  { key: 'geen',        label: 'Geen uitsplitsing', series: ['Totaal'] },
-  { key: 'team',        label: 'Team',              series: ['WMO', 'Jeugd', 'Participatie'] },
-  { key: 'wet',         label: 'Wet',               series: ['Wmo', 'Jeugdwet', 'Participatiewet'] },
-  { key: 'leeftijd',    label: 'Leeftijdsgroep',    series: ['0–17', '18–64', '65+'] },
-  { key: 'kern',        label: 'Kern',              series: ['Medemblik', 'Wognum', 'Wervershoof'] },
-  { key: 'leverancier', label: 'Leverancier',       series: ['Leverancier A', 'Leverancier B', 'Leverancier C'] },
-];
-const VQ_GRAN = [
-  { key: 'maand',    label: 'Per maand',    zin: 'maand' },
-  { key: 'kwartaal', label: 'Per kwartaal', zin: 'kwartaal' },
-  { key: 'jaar',     label: 'Per jaar',     zin: 'jaar' },
-];
-const VQ_SPAN = [
-  { key: '12m',     label: 'Laatste 12 maanden', zin: 'de laatste 12 maanden' },
-  { key: 'ditjaar', label: 'Dit jaar',           zin: 'dit jaar tot nu' },
-  { key: '3jaar',   label: 'Laatste 3 jaar',     zin: 'de laatste 3 jaar' },
-];
-const VQ_VIEWS = [
-  { key: 'auto',  label: 'Automatisch' },
-  { key: 'tabel', label: 'Tabel' },
-  { key: 'lijn',  label: 'Lijngrafiek' },
-  { key: 'staaf', label: 'Staafdiagram' },
-];
-const VQ_COLORS = ['#005496', '#16BECF', '#8DC63F'];
-
-const vqState = { begripId: null, dim: 'geen', gran: 'kwartaal', span: '12m', view: 'auto' };
-
-/* Welke uitsplitsingen zijn voor dit begrip beschikbaar? Nu: de vaste
-   lijst hierboven. Zodra in het Sheet de kolom "Uitsplitsingen" wordt
-   ingevuld voor een begrip (bijv. "team;wet"), toont de Vraagsteller
-   voor dát begrip alleen die opties — zonder codewijziging. */
-function vqDimsFor(entry) {
-  const all = VQ_DIMENSIES;
-  if (!entry || !entry.dimensies || entry.dimensies.length === 0) return all;
-  const wanted = new Set(entry.dimensies);
-  const filtered = all.filter(d => d.key === 'geen' || wanted.has(d.key));
-  return filtered.length > 1 ? filtered : all;
+function renderHome() {
+  renderHomeTiles();
+  renderHomeSearch();
 }
 
-function vqEffectiveView() {
-  if (vqState.view !== 'auto') return vqState.view;
-  return vqState.dim === 'geen' ? 'lijn' : 'staaf';
-}
+/* Telt en breekt per sectie uit tot een korte, feitelijke samenvatting
+   (geen decoratieve tekst — alles hieronder is een echt getal uit de
+   geladen data). Vóór het laden staan de tegels op '—'. */
+function renderHomeTiles() {
+  const numDef = document.getElementById('homeCountDefinities');
+  const numProc = document.getElementById('homeCountProcessen');
+  const numDv = document.getElementById('homeCountDatavelden');
+  const numDash = document.getElementById('homeCountDashboards');
+  if (!numDef) return; // Home-view nog niet in de DOM (kan niet gebeuren, maar defensief)
 
-/* ── Deterministische nepgetallen: zelfde begrip+keuzes = zelfde
-   getallen, zodat de preview niet "flikkert" bij her-render. ──── */
-function vqSeededRandom(seedStr) {
-  let h = 2166136261;
-  for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
-  let s = h >>> 0;
-  return function () {
-    s |= 0; s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+  numDef.textContent = entries.length || '—';
+  numProc.textContent = procEntries.length || '—';
+  numDv.textContent = dvEntries.length || '—';
+  numDash.textContent = dashEntries.length || '—';
 
-const VQ_MND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-function vqPeriodLabels() {
-  const now = new Date();
-  const out = [];
-  if (vqState.gran === 'maand') {
-    const n = vqState.span === 'ditjaar' ? now.getMonth() + 1 : 12;
-    for (let i = n - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      out.push(VQ_MND[d.getMonth()] + " '" + String(d.getFullYear()).slice(2));
-    }
-  } else if (vqState.gran === 'kwartaal') {
-    const curQ = Math.floor(now.getMonth() / 3);
-    const n = vqState.span === 'ditjaar' ? curQ + 1 : vqState.span === '3jaar' ? 12 : 4;
-    for (let i = n - 1; i >= 0; i--) {
-      let q = curQ - i, y = now.getFullYear();
-      while (q < 0) { q += 4; y--; }
-      out.push('Q' + (q + 1) + " '" + String(y).slice(2));
-    }
-  } else {
-    const n = vqState.span === 'ditjaar' ? 1 : 3;
-    for (let i = n - 1; i >= 0; i--) out.push(String(now.getFullYear() - i));
+  const chip = (n, label) => `<span>${n} ${escHtml(label)}</span>`;
+
+  if (entries.length) {
+    const vastgesteld = entries.filter(e => e.status === 'Vastgesteld').length;
+    document.getElementById('homeBreakdownDefinities').innerHTML =
+      chip(vastgesteld, 'vastgesteld') + chip(entries.length - vastgesteld, 'in behandeling');
   }
-  return out;
-}
 
-function vqDummySeries(entry) {
-  const dim = VQ_DIMENSIES.find(d => d.key === vqState.dim) || VQ_DIMENSIES[0];
-  const labels = vqPeriodLabels();
-  const rand = vqSeededRandom(`${entry.id}|${vqState.dim}|${vqState.gran}|${vqState.span}`);
-  const series = dim.series.map((name, si) => {
-    const base = 30 + Math.round(rand() * 80);
-    const trend = (rand() - 0.4) * 4;
-    const values = labels.map((_, i) => Math.max(2, Math.round(base + trend * i + (rand() - 0.5) * base * 0.35)));
-    return { name, color: VQ_COLORS[si % VQ_COLORS.length], values };
-  });
-  return { labels, series };
-}
-
-/* ── Voorbeeldvisual: kale inline-SVG (geen libraries), zelfde
-   aanpak als de proces-flowcharts. ─────────────────────────────── */
-function vqChartSVG(labels, series, kind) {
-  const W = 620, H = 240, padL = 16, padR = 16, padT = 16, padB = 32;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
-  const maxV = Math.max(1, ...series.flatMap(s => s.values)) * 1.12;
-  let out = '';
-  for (let g = 1; g <= 3; g++) {
-    const gy = padT + plotH - (plotH * g) / 3;
-    out += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="#EDF1F7" stroke-width="1"/>`;
+  if (procEntries.length) {
+    const mc = procEntries.filter(p => p.type === 'menscentraal').length;
+    document.getElementById('homeBreakdownProcessen').innerHTML =
+      chip(procEntries.length - mc, 'normaal') + (mc ? chip(mc, 'MensCentraal') : '');
   }
-  const n = labels.length;
-  if (kind === 'staaf') {
-    const groupW = plotW / n;
-    const barW = Math.min(34, (groupW * 0.62) / series.length);
-    labels.forEach((_, i) => {
-      const groupX = padL + i * groupW + (groupW - barW * series.length) / 2;
-      series.forEach((s, si) => {
-        const h = (s.values[i] / maxV) * plotH;
-        out += `<rect x="${(groupX + si * barW).toFixed(1)}" y="${(padT + plotH - h).toFixed(1)}" width="${(barW - 2).toFixed(1)}" height="${h.toFixed(1)}" rx="2.5" fill="${s.color}" opacity="0.92"/>`;
-      });
-    });
-  } else {
-    series.forEach(s => {
-      const pts = s.values.map((v, i) => {
-        const x = padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
-        const y = padT + plotH - (v / maxV) * plotH;
-        return [x, y];
-      });
-      out += `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round"/>`;
-      pts.forEach(p => { out += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2" fill="#fff" stroke="${s.color}" stroke-width="2"/>`; });
-    });
+
+  if (dvEntries.length) {
+    const bronnen = new Set(dvEntries.map(d => d.src).filter(Boolean)).size;
+    document.getElementById('homeBreakdownDatavelden').innerHTML = chip(bronnen, 'brontabellen');
   }
-  const step = n > 8 ? Math.ceil(n / 8) : 1;
-  labels.forEach((lbl, i) => {
-    if (i % step !== 0 && i !== n - 1) return;
-    const x = kind === 'staaf'
-      ? padL + i * (plotW / n) + (plotW / n) / 2
-      : padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
-    out += `<text x="${x.toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="10.5" fill="#4A6180">${escHtml(lbl)}</text>`;
-  });
-  out += `<line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="#C9D3E0" stroke-width="1.4"/>`;
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
-}
 
-function vqTableHTML(labels, series) {
-  const head = `<tr><th>Periode</th>${series.map(s => `<th style="text-align:right;">${escHtml(s.name)}</th>`).join('')}</tr>`;
-  const body = labels.map((lbl, i) =>
-    `<tr><td>${escHtml(lbl)}</td>${series.map(s => `<td class="num">${s.values[i]}</td>`).join('')}</tr>`
-  ).join('');
-  return `<table class="vq-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
-}
-
-function vqSentenceParts(entry) {
-  const dim = VQ_DIMENSIES.find(d => d.key === vqState.dim);
-  const gran = VQ_GRAN.find(g => g.key === vqState.gran);
-  const span = VQ_SPAN.find(s => s.key === vqState.span);
-  return { dim, gran, span,
-    text: `Hoeveel ${entry.term.toLowerCase()} per ${gran.zin}` +
-      (vqState.dim !== 'geen' ? `, uitgesplitst naar ${dim.label.toLowerCase()}` : '') +
-      `, over ${span.zin}?` };
-}
-
-function vqCopyText(entry) {
-  const { text } = vqSentenceParts(entry);
-  const viewLabel = { tabel: 'tabel', lijn: 'lijngrafiek', staaf: 'staafdiagram' }[vqEffectiveView()];
-  const velden = (entry.fieldChips || []).map(c => `${c.label} (${c.id})`).join(', ');
-  const lines = [
-    'DATAVRAAG — Definitiecatalogus Sociaal Domein, gemeente Medemblik',
-    '',
-    'Vraag: ' + text,
-    'Gewenste weergave: ' + viewLabel,
-    '',
-    `Definitie: ${entry.id} · ${entry.term} (status: ${entry.status || 'onbekend'})`,
-  ];
-  if (entry.def) lines.push('"' + entry.def.replace(/\s+/g, ' ').slice(0, 400) + (entry.def.length > 400 ? '…"' : '"'));
-  lines.push(velden ? 'Benodigde datavelden: ' + velden : 'Benodigde datavelden: nog niet gekoppeld in de catalogus');
-  return lines.join('\n');
-}
-
-function vqCopy() {
-  const entry = entries.find(e => e.id === vqState.begripId);
-  if (!entry) return;
-  const text = vqCopyText(entry);
-  const done = () => {
-    const btn = document.getElementById('vqCopyBtn');
-    if (!btn) return;
-    btn.classList.add('done');
-    btn.textContent = 'Gekopieerd ✓';
-    setTimeout(() => { if (document.getElementById('vqCopyBtn')) renderVqPreview(); }, 1600);
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(done).catch(() => { vqCopyFallback(text); done(); });
-  } else { vqCopyFallback(text); done(); }
-}
-function vqCopyFallback(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-  document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); } catch (e) { /* stil */ }
-  document.body.removeChild(ta);
-}
-
-/* ── Renderen ──────────────────────────────────────────────────── */
-function renderVq() {
-  renderVqBegripList();
-  renderVqChips();
-  renderVqPreview();
-}
-
-function renderVqBegripList() {
-  const wrap = document.getElementById('vqBegripList');
-  if (!wrap) return;
-  const q = (document.getElementById('vqSearch').value || '').toLowerCase();
-  const filtered = entries.filter(e => !q || `${e.term} ${e.def} ${e.cat}`.toLowerCase().includes(q));
-  if (filtered.length === 0) {
-    wrap.innerHTML = `<div class="vq-hint" style="padding:20px 12px;">${entries.length === 0 ? 'Data wordt geladen…' : 'Geen begrippen gevonden.'}</div>`;
-    return;
+  if (dashEntries.length) {
+    const extern = dashEntries.filter(d => (d.type || '').trim().toLowerCase() === 'extern').length;
+    document.getElementById('homeBreakdownDashboards').innerHTML =
+      chip(dashEntries.length - extern, 'intern') + chip(extern, 'extern');
   }
-  const byCat = new Map();
-  for (const e of filtered) {
-    const cat = e.cat || 'Overig';
-    if (!byCat.has(cat)) byCat.set(cat, []);
-    byCat.get(cat).push(e);
-  }
-  let html = '';
-  for (const [cat, list] of byCat) {
-    html += `<div class="vq-begrip-cat">${escHtml(cat)}</div>`;
-    html += list.map(e =>
-      `<div class="vq-begrip-row ${e.id === vqState.begripId ? 'sel' : ''}" data-vq-begrip="${escHtml(e.id)}">
-        <span>${hlHtml(e.term, q)}</span>${statusBadgeHtml(e.status)}
-      </div>`).join('');
-  }
-  wrap.innerHTML = html;
 }
 
-function renderVqChips() {
-  const entry = entries.find(e => e.id === vqState.begripId) || null;
-  const dims = vqDimsFor(entry);
-  if (!dims.some(d => d.key === vqState.dim)) vqState.dim = 'geen';
-  const chip = (attr, key, label, sel) =>
-    `<span class="vq-chip ${sel ? 'sel' : ''}" data-${attr}="${key}">${escHtml(label)}</span>`;
-  document.getElementById('vqDims').innerHTML =
-    dims.map(d => chip('vq-dim', d.key, d.label, d.key === vqState.dim)).join('');
-  document.getElementById('vqGran').innerHTML =
-    VQ_GRAN.map(g => chip('vq-gran', g.key, g.label, g.key === vqState.gran)).join('');
-  document.getElementById('vqSpan').innerHTML =
-    VQ_SPAN.map(s => chip('vq-span', s.key, s.label, s.key === vqState.span)).join('');
-  document.getElementById('vqView').innerHTML =
-    VQ_VIEWS.map(v => {
-      const label = v.key === 'auto' ? `Automatisch (${vqState.dim === 'geen' ? 'lijn' : 'staaf'})` : v.label;
-      return chip('vq-view', v.key, label, v.key === vqState.view);
-    }).join('');
-}
+/* Catalogusbrede zoekfunctie: doorzoekt alle vier datasets tegelijk en
+   toont per sectie de eerste paar treffers, met dezelfde badges/pills
+   als de betreffende tab zelf (zodat een resultaat er niet als een
+   nieuw, apart onderdeel uitziet). Leeg zoekveld = resultaten dicht. */
+function renderHomeSearch() {
+  const wrap = document.getElementById('homeSearchResults');
+  const input = document.getElementById('homeSearch');
+  if (!wrap || !input) return;
+  const q = (input.value || '').trim().toLowerCase();
+  if (!q) { wrap.classList.remove('show'); wrap.innerHTML = ''; return; }
 
-function renderVqPreview() {
-  const wrap = document.getElementById('vqPreview');
-  if (!wrap) return;
-  const entry = entries.find(e => e.id === vqState.begripId);
-  if (!entry) {
-    wrap.innerHTML = `<div class="vq-hint">Kies links een begrip om te beginnen.<br>Je ziet hier dan meteen hoe het antwoord op je vraag eruit gaat zien.</div>`;
+  const MAX = 6;
+  const defs = entries.filter(e => `${e.term} ${e.def}`.toLowerCase().includes(q)).slice(0, MAX);
+  const dvs = dvEntries.filter(d => `${d.name} ${d.src} ${d.desc}`.toLowerCase().includes(q)).slice(0, MAX);
+  const procs = procEntries.filter(p => `${p.naam} ${p.team} ${p.desc}`.toLowerCase().includes(q)).slice(0, MAX);
+  const dashes = dashEntries.filter(d => `${d.name} ${d.team} ${d.desc}`.toLowerCase().includes(q)).slice(0, MAX);
+
+  if (!defs.length && !dvs.length && !procs.length && !dashes.length) {
+    wrap.innerHTML = `<div class="home-result-empty">Niets gevonden voor "${escHtml(q)}".</div>`;
+    wrap.classList.add('show');
     return;
   }
 
-  const { text } = vqSentenceParts(entry);
-  const sentenceHtml = escHtml(text)
-    .replace(escHtml(entry.term.toLowerCase()), `<b>${escHtml(entry.term.toLowerCase())}</b>`);
-
-  const { labels, series } = vqDummySeries(entry);
-  const view = vqEffectiveView();
-  const visual = view === 'tabel' ? vqTableHTML(labels, series) : vqChartSVG(labels, series, view);
-  const legend = (vqState.dim !== 'geen' && view !== 'tabel')
-    ? `<div class="vq-legend">${series.map(s => `<span><i style="background:${s.color};"></i>${escHtml(s.name)}</span>`).join('')}</div>`
+  const group = (label, items, render) => items.length
+    ? `<div class="home-result-group-label">${escHtml(label)}</div>` + items.map(render).join('')
     : '';
 
-  const veldenHtml = (entry.fieldChips || []).length
-    ? entry.fieldChips.map(c =>
-        `<span class="df-chip catalog df-chip-link" data-dfid="${escHtml(c.id)}" title="Open dit dataveld">${escHtml(c.label)}</span>`).join('')
-    : `<span style="font-style:italic;color:var(--sub);font-size:.7rem;">nog niet gekoppeld in de catalogus</span>`;
-
-  const matches = dashEntries.filter(d => (d.dekt || []).includes(entry.id.toUpperCase()));
-  let dashHtml;
-  if (matches.length) {
-    dashHtml = matches.map(d => `
-      <div class="vq-banner match">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        <span>Dit bestaat al: het dashboard "${escHtml(d.name)}" toont ${escHtml(entry.term.toLowerCase())}.</span>
-        <span class="vq-banner-link" data-vq-dash="${escHtml(d.id)}">Bekijk</span>
-      </div>`).join('');
-  } else {
-    dashHtml = `<div class="vq-banner nomatch">Nog geen dashboard gekoppeld aan dit begrip. Stuur je vraag naar het datateam met de kopieer-knop hierboven.</div>`;
-  }
-
-  wrap.innerHTML = `
-    <div class="vq-sentence">
-      <div style="flex:1;">${sentenceHtml}</div>
-      <button class="vq-copy-btn" id="vqCopyBtn" data-vq-copy="1" title="Kopieer de vraag inclusief definitie en datavelden — klaar om te mailen naar het datateam">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg>
-        Kopieer vraag
-      </button>
-    </div>
-    <div class="vq-preview-note">Voorbeeld met fictieve getallen — zo gaat het antwoord op je vraag eruitzien.</div>
-    ${visual}
-    ${legend}
-    <div style="margin-top:16px;">
-      <div class="vq-link-row">
-        <span class="vq-link-key">Definitie</span>
-        <span class="df-chip catalog df-chip-link" data-defid="${escHtml(entry.id)}" title="Open deze definitie">${escHtml(entry.id)} · ${escHtml(entry.term)}</span>
-        ${statusBadgeHtml(entry.status)}
-      </div>
-      <div class="vq-link-row" style="align-items:flex-start;">
-        <span class="vq-link-key" style="margin-top:3px;">Datavelden</span>
-        <span class="data-fields-wrap" style="display:flex;flex-wrap:wrap;gap:5px;">${veldenHtml}</span>
-      </div>
-    </div>
-    ${dashHtml}`;
+  wrap.innerHTML =
+    group('Definities', defs, e => `
+      <div class="home-result-item" data-home-def="${escHtml(e.id)}">
+        <span class="home-result-term">${hlHtml(e.term, q)}</span>
+        ${statusBadgeHtml(e.status)}
+      </div>`) +
+    group('Datavelden', dvs, d => `
+      <div class="home-result-item" data-home-dv="${escHtml(d.id)}">
+        <span class="home-result-term">${hlHtml(d.name, q)}</span>
+        <span class="home-result-sub">${escHtml(d.src)}</span>
+      </div>`) +
+    group('Processen', procs, p => `
+      <div class="home-result-item" data-home-proc="${escHtml(p.id)}">
+        <span class="home-result-term">${hlHtml(p.naam, q)}</span>
+        <span class="home-result-sub">${escHtml(p.team)}</span>
+      </div>`) +
+    group('Dashboards', dashes, d => `
+      <div class="home-result-item" data-home-dash="${escHtml(d.id)}">
+        <span class="home-result-term">${hlHtml(d.name, q)}</span>
+        ${d.type ? `<span class="dash-badge ${dashTypeClass(d.type)}">${escHtml(d.type)}</span>` : ''}
+      </div>`);
+  wrap.classList.add('show');
 }
 
-function openDashFromVq(dashId) {
+/* Open een proces vanuit de Home-zoekresultaten: zelfde patroon als
+   openDefinitieFromChip/openDataveldFromChip (filters leegmaken,
+   naar de juiste tab, item selecteren). */
+function openProcFromHome(id) {
+  document.getElementById('procSearch').value = '';
+  document.getElementById('procFilterTeam').value = '';
+  document.getElementById('procFilterType').value = '';
+  switchMainTab('processen');
+  renderProcList();
+  selectProcEntry(id);
+}
+
+/* Open een dashboard vanuit de Home-zoekresultaten. */
+function openDashFromHome(id) {
   document.getElementById('dashSearch').value = '';
   document.getElementById('dashFilterType').value = '';
   document.getElementById('dashFilterTeam').value = '';
   switchMainTab('dashboards');
   renderDashTable();
-  selectDashEntry(dashId);
-  scrollRowIntoView('dashTableBody', dashId);
+  selectDashEntry(id);
+  scrollRowIntoView('dashTableBody', id);
 }
 
 /* ====================================================================
@@ -1869,7 +1664,7 @@ function openDashFromVq(dashId) {
 function switchMainTab(tab) {
   activeMainTab = tab;
   const views = {
-    vraagsteller: 'view-vraagsteller',
+    home: 'view-home',
     definities: 'view-definities',
     processen: 'view-processen',
     datavelden: 'view-datavelden',
@@ -1887,10 +1682,10 @@ function switchMainTab(tab) {
       el.style.display = isActive ? 'flex' : 'none';
     }
   });
-  ['navVraagsteller','navDefinities','navProcessen','navDatavelden','navDashboards'].forEach(navId => {
+  ['navHome','navDefinities','navProcessen','navDatavelden','navDashboards'].forEach(navId => {
     document.getElementById(navId).classList.remove('active');
   });
-  const navMap = { vraagsteller:'navVraagsteller', definities:'navDefinities', processen:'navProcessen', datavelden:'navDatavelden', dashboards:'navDashboards' };
+  const navMap = { home:'navHome', definities:'navDefinities', processen:'navProcessen', datavelden:'navDatavelden', dashboards:'navDashboards' };
   document.getElementById(navMap[tab]).classList.add('active');
   renderHeaderCounts();
 }
@@ -1968,26 +1763,19 @@ function initInteractions() {
     const chip = ev.target.closest('[data-defid]');
     if (chip) openDefinitieFromChip(chip.dataset.defid);
   });
-  // Vraagsteller: één listener voor alle klikbare onderdelen
-  document.getElementById('view-vraagsteller').addEventListener('click', ev => {
+  // Home: navigatietegels + catalogusbrede zoekresultaten
+  document.getElementById('view-home').addEventListener('click', ev => {
     const t = ev.target;
-    const begrip = t.closest('[data-vq-begrip]');
-    if (begrip) { vqState.begripId = begrip.dataset.vqBegrip; renderVq(); return; }
-    const dim = t.closest('[data-vq-dim]');
-    if (dim) { vqState.dim = dim.dataset.vqDim; renderVqChips(); renderVqPreview(); return; }
-    const gran = t.closest('[data-vq-gran]');
-    if (gran) { vqState.gran = gran.dataset.vqGran; renderVqChips(); renderVqPreview(); return; }
-    const span = t.closest('[data-vq-span]');
-    if (span) { vqState.span = span.dataset.vqSpan; renderVqChips(); renderVqPreview(); return; }
-    const view = t.closest('[data-vq-view]');
-    if (view) { vqState.view = view.dataset.vqView; renderVqChips(); renderVqPreview(); return; }
-    if (t.closest('[data-vq-copy]')) { vqCopy(); return; }
-    const dash = t.closest('[data-vq-dash]');
-    if (dash) { openDashFromVq(dash.dataset.vqDash); return; }
-    const dfChip = t.closest('[data-dfid]');
-    if (dfChip) { openDataveldFromChip(dfChip.dataset.dfid); return; }
-    const defChip = t.closest('[data-defid]');
-    if (defChip) { openDefinitieFromChip(defChip.dataset.defid); return; }
+    const tile = t.closest('[data-home-tile]');
+    if (tile) { switchMainTab(tile.dataset.homeTile); return; }
+    const def = t.closest('[data-home-def]');
+    if (def) { openDefinitieFromChip(def.dataset.homeDef); return; }
+    const dv = t.closest('[data-home-dv]');
+    if (dv) { openDataveldFromChip(dv.dataset.homeDv); return; }
+    const proc = t.closest('[data-home-proc]');
+    if (proc) { openProcFromHome(proc.dataset.homeProc); return; }
+    const dash = t.closest('[data-home-dash]');
+    if (dash) { openDashFromHome(dash.dataset.homeDash); return; }
   });
 }
 
