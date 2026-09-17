@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datacatalogus Sociaal Domein | Gemeente Medemblik</title>
+<script>
+  // GitHub Pages is statische hosting: een pad als /definities of
+  // /datavelden bestaat niet als los bestand, dus GitHub serveert dit
+  // 404-bestand. We bewaren het gevraagde pad even en sturen door naar
+  // index.html, dat het pad weer terugzet en het juiste tabblad opent
+  // (zie het restore-script bovenaan index.html).
+  sessionStorage.setItem('spa-redirect-path', location.pathname + location.search + location.hash);
+  location.replace('/definitiecatalogus-medemblik/');
+</script>
+</head>
+<body>
+</body>
+</html>
