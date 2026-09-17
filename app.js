@@ -1643,7 +1643,7 @@ function urlForTab(tab) {
 function tabFromLocation() {
   let path = location.pathname;
   if (path.indexOf(BASE_PATH) === 0) path = path.slice(BASE_PATH.length);
-  path = path.replace(/^\/+|\/+$/g, '');
+  path = path.replace(/^\/+|\/+$/g, '').toLowerCase();
   return SLUG_TABS[path] || 'home';
 }
 
