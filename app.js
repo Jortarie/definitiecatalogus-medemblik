@@ -298,11 +298,15 @@ function mapProcessenRows(records) {
       return;
     }
 
-    // stapType bepaalt de kleur in de figuur. Onbekende of lege
-    // waarde valt terug op 'proces' (neutraal blauw) zodat een
-    // typefout in Sheets niet de hele rij laat verdwijnen — wel
-    // gelogd, zodat het opvalt.
-    const VALID_STEP_TYPES = ['start', 'proces', 'beslissing', 'actie', 'einde'];
+    // stapType bepaalt de vorm/kleur in de figuur. Onbekende of lege
+    // waarde valt terug op 'proces' (neutraal blauw, gewone activiteit-
+    // kaart) zodat een typefout in Sheets niet de hele rij laat
+    // verdwijnen — wel gelogd, zodat het opvalt.
+    // Sinds de overstap naar BPMN-achtige swimlanes (modelleerconventies
+    // Medemblik) zijn 'subproces' (verwijzing naar een ander proces,
+    // gestippeld kader) en 'parallel' (parallel-gateway, "+"-diamant)
+    // toegevoegd naast de bestaande typen.
+    const VALID_STEP_TYPES = ['start', 'proces', 'beslissing', 'parallel', 'actie', 'subproces', 'einde'];
     let stapType = (r.stapType || '').trim().toLowerCase();
     if (stapType && !VALID_STEP_TYPES.includes(stapType)) {
       rowIssues.push(`Proces "${procId}" stap ${stapNr}: onbekend stapType "${stapType}", gebruik 'proces' als fallback.`);
@@ -319,6 +323,17 @@ function mapProcessenRows(records) {
       stapVragen: decodeText(r.stapVragen)  // optioneel: vragen/datapunten, één per regel (\n-gescheiden)
         .split('\n').map(v => v.trim()).filter(Boolean),
       stapType,
+      // stapRol: wie voert de stap uit (afdeling/rol/systeem) — bepaalt
+      // de swimlane (BPMN-lane) waarin de stap getekend wordt. Leeg
+      // toegestaan (oudere, nog niet gemigreerde processen): die
+      // stappen komen dan samen in één naamloze lane, zodat een proces
+      // zonder deze kolom nog steeds gewoon rendert.
+      stapRol: (r.stapRol || '').trim(),
+      // stapVerwijstNaarProces: alleen bij stapType 'subproces' — het
+      // procId van het proces waarnaar dit kader verwijst. Optioneel;
+      // indien ingevuld en het proces bestaat, is het kader klikbaar en
+      // springt de gebruiker naar dat proces.
+      stapVerwijstNaarProces: (r.stapVerwijstNaarProces || '').trim(),
       volgendeStap,
       volgendeLabel,
     });
@@ -922,54 +937,63 @@ function computeStepLayers(steps) {
   return layer;
 }
 
-/* ── Volgorde binnen elke laag: sorteert stappen op de gemiddelde
-   x-volgorde-index van hun voorgangers in de vorige laag (eenvoudige
-   barycenter-heuristiek). Zonder dit raken parallelle routes (zoals
-   "Nee"-pad en "Ja"-pad die later weer samenkomen) elkaar onnodig
-   kruisend, omdat groupByLayer anders gewoon de CSV-rijvolgorde
-   aanhoudt in plaats van de visuele ouder-volgorde te volgen. ────── */
-function groupByLayer(steps, layerMap) {
-  const groups = new Map();
+/* ── Swimlanes (sinds de overstap op de Medemblik-modelleerconventies,
+   17 sept 2026): een proces wordt niet langer als vrije kaartenwolk
+   getekend, maar als een BPMN-achtig swimlane-diagram. X = voortgang
+   door het proces (de bestaande layer-berekening hierboven, ongemoeid
+   gelaten). Y = wie de stap uitvoert (stapRol). Elke unieke stapRol-
+   waarde wordt een eigen horizontale baan (lane), van boven naar
+   beneden in volgorde van eerste voorkomen in het proces — behalve
+   lanes die uitsluitend 'subproces'-verwijzingen bevatten (zoals
+   "Vervolgproces"): die komen altijd als laatste, ongeacht waar ze in
+   het proces voorkomen, zodat vervolgprocessen visueel los blijven
+   staan van de uitvoerende rollen. Een proces zonder stapRol-kolom
+   (nog niet gemigreerd) valt terug op één naamloze lane — zo blijft
+   oude data gewoon werken totdat iemand de rollen aanvult. ────────── */
+function computeLaneOrder(steps, layerMap) {
+  const byLane = new Map(); // laneKey -> steps[]
   for (const s of steps) {
-    const l = layerMap.get(s.stapNr);
-    if (!groups.has(l)) groups.set(l, []);
-    groups.get(l).push(s);
+    const key = s.stapRol || '';
+    if (!byLane.has(key)) byLane.set(key, []);
+    byLane.get(key).push(s);
   }
+  const lanes = [...byLane.entries()].map(([key, laneSteps]) => ({
+    key,
+    label: key || 'Proces',
+    steps: laneSteps,
+    minLayer: Math.min(...laneSteps.map(s => layerMap.get(s.stapNr))),
+    allSubproces: laneSteps.every(s => s.stapType === 'subproces'),
+  }));
+  lanes.sort((a, b) => {
+    if (a.allSubproces !== b.allSubproces) return a.allSubproces ? 1 : -1;
+    return a.minLayer - b.minLayer;
+  });
+  return lanes;
+}
 
-  const maxLayer = Math.max(...layerMap.values());
-  const xIndexByStep = new Map(); // stapNr -> positie-index binnen zijn laag
-
-  // Laag 0: volgorde blijft de CSV-volgorde (geen voorgangers om op te sorteren).
-  const layer0 = groups.get(0) || [];
-  layer0.forEach((s, i) => xIndexByStep.set(s.stapNr, i));
-
-  // Bouw incoming-map (welke stappen wijzen naar welke) opnieuw op,
-  // zelfde als in computeStepLayers, maar hier lokaal nodig om per
-  // stap de voorgangers te kunnen opvragen.
-  const incoming = new Map(steps.map(s => [s.stapNr, []]));
-  for (const s of steps) {
-    for (const next of s.volgendeStap) {
-      if (incoming.has(next)) incoming.get(next).push(s.stapNr);
+/* Binnen één (lane, laag)-cel staan normaal maar 1 stap. Komt dat toch
+   vaker voor (bijv. twee acties van dezelfde rol die toevallig in
+   dezelfde laag vallen), dan stapelen we ze als sub-rij binnen de
+   lane-baan, in CSV-volgorde — zeldzaam genoeg om geen zwaardere
+   kruisingsheuristiek voor nodig te hebben. */
+function computeSubrows(lanes, layerMap) {
+  const subrowByStep = new Map();
+  const cellCountByLane = new Map(); // laneIdx -> max aantal sub-rijen
+  lanes.forEach((lane, laneIdx) => {
+    const byLayer = new Map();
+    for (const s of lane.steps) {
+      const l = layerMap.get(s.stapNr);
+      if (!byLayer.has(l)) byLayer.set(l, []);
+      byLayer.get(l).push(s);
     }
-  }
-
-  for (let l = 1; l <= maxLayer; l++) {
-    const stepsInLayer = groups.get(l) || [];
-    // Barycenter: gemiddelde x-index van de voorgangers (die al een
-    // x-index hebben, want voorgangers liggen altijd in een eerdere
-    // laag die we al verwerkt hebben).
-    const withScore = stepsInLayer.map(s => {
-      const preds = incoming.get(s.stapNr) || [];
-      const predXs = preds.map(p => xIndexByStep.get(p)).filter(x => x !== undefined);
-      const score = predXs.length > 0 ? predXs.reduce((a, b) => a + b, 0) / predXs.length : 0;
-      return { step: s, score };
-    });
-    withScore.sort((a, b) => a.score - b.score);
-    groups.set(l, withScore.map(w => w.step));
-    withScore.forEach((w, i) => xIndexByStep.set(w.step.stapNr, i));
-  }
-
-  return groups;
+    let maxCell = 1;
+    for (const cellSteps of byLayer.values()) {
+      cellSteps.forEach((s, i) => subrowByStep.set(s.stapNr, i));
+      maxCell = Math.max(maxCell, cellSteps.length);
+    }
+    cellCountByLane.set(laneIdx, maxCell);
+  });
+  return { subrowByStep, cellCountByLane };
 }
 
 function wrapToTwoLines(str, maxCharsPerLine) {
@@ -995,47 +1019,56 @@ function wrapToTwoLines(str, maxCharsPerLine) {
   return lines;
 }
 
-function renderProcessFlowSVG(steps, layerMap, groups, selectedStapNr) {
-  const boxW = 216, minBoxH = 78, lineHeight = 17, colGap = 40, rowGap = 78, padding = 44;
+function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
+  const boxW = 208, cardH = 78, lineHeight = 16, colGap = 44, cellH = 118, padding = 40;
+  const laneLabelW = 40;
 
   const wrapped = new Map();
-  for (const s of steps) wrapped.set(s.stapNr, wrapToTwoLines(s.stapNaam, 20));
+  for (const s of steps) wrapped.set(s.stapNr, wrapToTwoLines(s.stapNaam, 19));
 
   const maxLayer = Math.max(...layerMap.values());
-  const maxStepsInLayer = Math.max(...[...groups.values()].map(g => g.length));
-  const svgWidth = padding * 2 + maxStepsInLayer * boxW + (maxStepsInLayer - 1) * colGap;
+  const { subrowByStep, cellCountByLane } = computeSubrows(lanes, layerMap);
 
-  const layerHeights = new Map();
-  for (const [layerNr, stepsInLayer] of groups) {
-    const maxLines = Math.max(...stepsInLayer.map(s => wrapped.get(s.stapNr).length));
-    layerHeights.set(layerNr, Math.max(minBoxH, 48 + maxLines * lineHeight));
-  }
+  const svgWidth = padding * 2 + laneLabelW + (maxLayer + 1) * boxW + maxLayer * colGap;
 
-  let svgHeight;
-  const layerYStart = new Map();
+  // Y-positie van elke lane-baan (gestapeld, hoogte = aantal sub-rijen × cellH).
+  const laneTop = new Map();
+  const laneHeight = new Map();
   {
     let cursorY = padding;
-    for (let l = 0; l <= maxLayer; l++) {
-      layerYStart.set(l, cursorY);
-      cursorY += layerHeights.get(l) + rowGap;
-    }
-    svgHeight = cursorY - rowGap + padding;
-  }
-
-  const pos = new Map();
-  for (const [layerNr, stepsInLayer] of groups) {
-    const n = stepsInLayer.length;
-    const totalWidth = n * boxW + (n - 1) * colGap;
-    const startX = (svgWidth - totalWidth) / 2;
-    const boxH = layerHeights.get(layerNr);
-    const y = layerYStart.get(layerNr);
-    stepsInLayer.forEach((step, i) => {
-      const x = startX + i * (boxW + colGap);
-      pos.set(step.stapNr, { x, y, w: boxW, h: boxH });
+    lanes.forEach((lane, laneIdx) => {
+      const h = cellCountByLane.get(laneIdx) * cellH;
+      laneTop.set(laneIdx, cursorY);
+      laneHeight.set(laneIdx, h);
+      cursorY += h;
     });
+    var svgHeight = cursorY + padding * 0.5;
   }
 
-  // Ja/nee-labels op pijlen krijgen een betekenisvolle kleur.
+  const laneIdxByStep = new Map();
+  lanes.forEach((lane, laneIdx) => { for (const s of lane.steps) laneIdxByStep.set(s.stapNr, laneIdx); });
+
+  // Elke stap krijgt een centerpunt (cx, cy) — de vorm (cirkel/ruit/
+  // kaart) wordt daaromheen getekend, zodat pijlen altijd gewoon op
+  // hoogte cy aan de rand van de vorm kunnen aansluiten.
+  const pos = new Map();
+  for (const s of steps) {
+    const layerNr = layerMap.get(s.stapNr);
+    const laneIdx = laneIdxByStep.get(s.stapNr);
+    const subrow = subrowByStep.get(s.stapNr) || 0;
+    const cx = padding + laneLabelW + layerNr * (boxW + colGap) + boxW / 2;
+    const cy = laneTop.get(laneIdx) + subrow * cellH + cellH / 2;
+    pos.set(s.stapNr, { cx, cy, laneIdx });
+  }
+
+  // Halve breedte per vorm — bepaalt waar een pijl de vorm raakt.
+  function halfW(stapType) {
+    if (stapType === 'start' || stapType === 'einde') return 26;
+    if (stapType === 'beslissing' || stapType === 'parallel') return 32;
+    return boxW / 2; // proces, actie, subproces
+  }
+
+  // Ja/nee/kort/langdurig-labels op pijlen krijgen een betekenisvolle kleur.
   function arrowLabelStyle(label) {
     const l = (label || '').trim().toLowerCase();
     if (l === 'ja' || l === 'akkoord')  return { bg: '#E1F5EE', border: '#9FE1CB', text: '#0B6E49' };
@@ -1050,14 +1083,24 @@ function renderProcessFlowSVG(steps, layerMap, groups, selectedStapNr) {
       const to = pos.get(nextNr);
       if (!from || !to) return;
       const label = (s.volgendeLabel && s.volgendeLabel[idx]) || '';
-      const x1 = from.x + from.w / 2, y1 = from.y + from.h;
-      const x2 = to.x + to.w / 2, y2 = to.y;
-      const midY = (y1 + y2) / 2;
-      const path = `M ${x1} ${y1 + 2} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2 - 3}`;
+      const x1 = from.cx + halfW(s.stapType), y1 = from.cy;
+      const toStep = steps.find(x => x.stapNr === nextNr);
+      const x2 = to.cx - halfW(toStep ? toStep.stapType : ''), y2 = to.cy;
+      const midX = (x1 + x2) / 2;
+      const path = y1 === y2
+        ? `M ${x1} ${y1} L ${x2 - 2} ${y2}`
+        : `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 - 2} ${y2}`;
       arrows += `<path d="${path}" fill="none" stroke="#A7B8CE" stroke-width="2" marker-end="url(#proc-arrowhead)"/>`;
       if (label) {
         const st = arrowLabelStyle(label);
-        const labelX = (x1 + x2) / 2, labelY = midY;
+        // Label een stukje langs het EIGEN pad plaatsen (niet vlak bij
+        // het vertrekpunt): bij meerdere vertakkingen vanuit dezelfde
+        // gateway loopt elk pad naar een andere y2 (andere lane/subrij),
+        // dus dit voorkomt dat labels van verschillende vertakkingen
+        // over elkaar heen vallen.
+        const t = 0.32;
+        const labelX = x1 + (x2 - x1) * t;
+        const labelY = y1 === y2 ? y1 - 15 : y1 + (y2 - y1) * t + (y2 > y1 ? 11 : -11);
         const w = Math.max(38, label.length * 7 + 18);
         arrows += `<rect x="${labelX - w / 2}" y="${labelY - 12}" width="${w}" height="24" rx="12" fill="${st.bg}" stroke="${st.border}" stroke-width="1.2"/>`;
         arrows += `<text x="${labelX}" y="${labelY + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${st.text}">${escHtml(label)}</text>`;
@@ -1065,15 +1108,29 @@ function renderProcessFlowSVG(steps, layerMap, groups, selectedStapNr) {
     });
   }
 
-  // Stijl per staptype — witte kaart met gekleurde accentbalk en
-  // type-chip; start/einde als pil met lichte tint (in-/uitgang van
-  // het proces is zo in één oogopslag herkenbaar).
+  // Lane-banen: afwisselend lichte achtergrond + rolnaam verticaal
+  // links, zoals in de officiële procesplaten (swimlanes per BPMN-
+  // modelleerconventies Medemblik).
+  let laneBg = '';
+  lanes.forEach((lane, laneIdx) => {
+    const y = laneTop.get(laneIdx), h = laneHeight.get(laneIdx);
+    if (laneIdx % 2 === 1) laneBg += `<rect x="0" y="${y}" width="${svgWidth}" height="${h}" fill="#F7FAFC"/>`;
+    if (laneIdx > 0) laneBg += `<line x1="0" y1="${y}" x2="${svgWidth}" y2="${y}" stroke="#DDE3EC" stroke-width="1"/>`;
+    laneBg += `<text x="${padding / 2 + 6}" y="${y + h / 2}" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing="0.4" fill="#5C7A93" transform="rotate(-90 ${padding / 2 + 6} ${y + h / 2})">${escHtml(lane.label.toUpperCase())}</text>`;
+  });
+
+  // Stijl per staptype — kleuren consistent met de rest van de app
+  // (huisstijl), vormen sinds de swimlane-overstap wél echte BPMN-
+  // notatie: cirkel (event), ruit (gateway), kaart (activiteit),
+  // gestippelde kaart (subproces-verwijzing).
   const STEP_TYPE_STYLE = {
-    start:      { accent: '#1D9E75', tint: '#E1F5EE', label: 'Start' },
+    start:      { accent: '#1D9E75', tint: '#E1F5EE' },
     proces:     { accent: '#005496', tint: '#E6F1FB', label: 'Processtap' },
-    beslissing: { accent: '#F26722', tint: '#FFF0E6', label: 'Beslissing' },
+    beslissing: { accent: '#F26722', tint: '#FFF0E6' },
+    parallel:   { accent: '#F26722', tint: '#FFF0E6' },
     actie:      { accent: '#7F77DD', tint: '#EDE9FC', label: 'Actie / taak' },
-    einde:      { accent: '#0B6E49', tint: '#E1F5EE', label: 'Einde' },
+    subproces:  { accent: '#4A6180', tint: '#F2F5F9' },
+    einde:      { accent: '#0B6E49', tint: '#E1F5EE' },
   };
 
   let boxes = '';
@@ -1082,45 +1139,80 @@ function renderProcessFlowSVG(steps, layerMap, groups, selectedStapNr) {
     const isSelected = s.stapNr === selectedStapNr;
     const style = STEP_TYPE_STYLE[s.stapType] || STEP_TYPE_STYLE.proces;
     const nameLines = wrapped.get(s.stapNr);
-    const isPill = s.stapType === 'start' || s.stapType === 'einde';
-    const sel = isSelected
-      ? `<rect x="${p.x - 5}" y="${p.y - 5}" width="${p.w + 10}" height="${p.h + 10}" rx="${isPill ? (p.h + 10) / 2 : 17}" fill="none" stroke="#005496" stroke-width="2.5" stroke-dasharray="none" opacity="0.9"/>`
-      : '';
+    const selColor = isSelected ? '#005496' : null;
+    const gotoAttr = (s.stapType === 'subproces' && s.stapVerwijstNaarProces)
+      ? ` data-goto-proc="${escHtml(s.stapVerwijstNaarProces)}" style="cursor:pointer;"` : '';
 
-    if (isPill) {
-      // Pilvorm: getinte achtergrond, gecentreerde tekst
-      const cy = p.y + p.h / 2;
-      const totalTextH = 14 + nameLines.length * lineHeight;
-      const typeY = cy - totalTextH / 2 + 10;
+    if (s.stapType === 'start' || s.stapType === 'einde') {
+      // Event: cirkel, naam eronder (klassieke BPMN-weergave).
+      const r = 26;
+      const sel = isSelected ? `<circle cx="${p.cx}" cy="${p.cy}" r="${r + 5}" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
+      const labelY0 = p.cy + r + 18;
       const nameLinesHtml = nameLines.map((line, i) =>
-        `<text x="${p.x + p.w / 2}" y="${typeY + 18 + i * lineHeight}" text-anchor="middle" font-size="13.5" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
+        `<text x="${p.cx}" y="${labelY0 + i * lineHeight}" text-anchor="middle" font-size="12" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}">
         ${sel}
-        <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="${p.h / 2}" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.6" filter="url(#proc-shadow)"/>
-        <text x="${p.x + p.w / 2}" y="${typeY}" text-anchor="middle" font-size="9.5" font-weight="700" letter-spacing="1.2" fill="${style.accent}">${style.label.toUpperCase()}</text>
+        <circle cx="${p.cx}" cy="${p.cy}" r="${r}" fill="${style.tint}" stroke="${style.accent}" stroke-width="${s.stapType === 'einde' ? 3 : 2}" filter="url(#proc-shadow)"/>
+        ${nameLinesHtml}
+      </g>`;
+    } else if (s.stapType === 'beslissing' || s.stapType === 'parallel') {
+      // Gateway: ruit (diamant), vraag/label eronder. Parallel-gateway
+      // krijgt een "+" in het midden (BPMN-conventie).
+      const hw = 32;
+      const pts = `${p.cx},${p.cy - hw} ${p.cx + hw},${p.cy} ${p.cx},${p.cy + hw} ${p.cx - hw},${p.cy}`;
+      const sel = isSelected ? `<polygon points="${p.cx},${p.cy - hw - 5} ${p.cx + hw + 5},${p.cy} ${p.cx},${p.cy + hw + 5} ${p.cx - hw - 5},${p.cy}" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
+      const plus = s.stapType === 'parallel'
+        ? `<path d="M ${p.cx - 10} ${p.cy} H ${p.cx + 10} M ${p.cx} ${p.cy - 10} V ${p.cy + 10}" stroke="${style.accent}" stroke-width="3" stroke-linecap="round"/>` : '';
+      const labelY0 = p.cy + hw + 18;
+      const nameLinesHtml = nameLines.map((line, i) =>
+        `<text x="${p.cx}" y="${labelY0 + i * lineHeight}" text-anchor="middle" font-size="12" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
+      ).join('');
+      boxes += `
+      <g class="proc-node" data-stapnr="${s.stapNr}">
+        ${sel}
+        <polygon points="${pts}" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.8" filter="url(#proc-shadow)"/>
+        ${plus}
+        ${nameLinesHtml}
+      </g>`;
+    } else if (s.stapType === 'subproces') {
+      // Verwijzing naar een ander proces: gestippeld kader, geen
+      // uitgaande pijl (eindpunt van dit pad), optioneel klikbaar.
+      const x = p.cx - boxW / 2, y = p.cy - cardH / 2;
+      const sel = isSelected ? `<rect x="${x - 5}" y="${y - 5}" width="${boxW + 10}" height="${cardH + 10}" rx="14" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
+      const nameLinesHtml = nameLines.map((line, i) =>
+        `<text x="${p.cx}" y="${p.cy - (nameLines.length - 1) * lineHeight / 2 + i * lineHeight + 5}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${style.accent}">${escHtml(line)}</text>`
+      ).join('');
+      boxes += `
+      <g class="proc-node" data-stapnr="${s.stapNr}"${gotoAttr}>
+        ${sel}
+        <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="10" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <text x="${p.cx}" y="${y + 18}" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="1" fill="${style.accent}">VERVOLGPROCES →</text>
         ${nameLinesHtml}
       </g>`;
     } else {
-      // Kaart: wit, gekleurde accentbalk boven, type-chip + stapnummer
+      // Activiteit: witte kaart, gekleurde accentbalk boven, type-chip + stapnummer.
+      const label = STEP_TYPE_STYLE[s.stapType]?.label || style.label || 'Processtap';
+      const x = p.cx - boxW / 2, y = p.cy - cardH / 2;
+      const sel = isSelected ? `<rect x="${x - 5}" y="${y - 5}" width="${boxW + 10}" height="${cardH + 10}" rx="17" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
       const nameLinesHtml = nameLines.map((line, i) =>
-        `<text x="${p.x + 16}" y="${p.y + 50 + i * lineHeight}" font-size="13.5" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
+        `<text x="${x + 16}" y="${y + 50 + i * lineHeight}" font-size="13" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}">
         ${sel}
-        <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="12" fill="#FFFFFF" stroke="${isSelected ? '#005496' : '#DDE3EC'}" stroke-width="${isSelected ? 2 : 1.3}" filter="url(#proc-shadow)"/>
-        <path d="M ${p.x + 12} ${p.y} H ${p.x + p.w - 12} A 12 12 0 0 1 ${p.x + p.w} ${p.y + 12} V ${p.y + 4.5} H ${p.x} V ${p.y + 12} A 12 12 0 0 1 ${p.x + 12} ${p.y} Z" fill="${style.accent}"/>
-        <text x="${p.x + 16}" y="${p.y + 26}" font-size="9.5" font-weight="700" letter-spacing="1.1" fill="${style.accent}">${style.label.toUpperCase()}</text>
-        <circle cx="${p.x + p.w - 22}" cy="${p.y + 24}" r="11" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.2"/>
-        <text x="${p.x + p.w - 22}" y="${p.y + 28}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${style.accent}">${escHtml(String(s.stapNr))}</text>
+        <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="12" fill="#FFFFFF" stroke="${isSelected ? '#005496' : '#DDE3EC'}" stroke-width="${isSelected ? 2 : 1.3}" filter="url(#proc-shadow)"/>
+        <path d="M ${x + 12} ${y} H ${x + boxW - 12} A 12 12 0 0 1 ${x + boxW} ${y + 12} V ${y + 4.5} H ${x} V ${y + 12} A 12 12 0 0 1 ${x + 12} ${y} Z" fill="${style.accent}"/>
+        <text x="${x + 16}" y="${y + 26}" font-size="9" font-weight="700" letter-spacing="1" fill="${style.accent}">${escHtml(label.toUpperCase())}</text>
+        <circle cx="${x + boxW - 22}" cy="${y + 24}" r="11" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.2"/>
+        <text x="${x + boxW - 22}" y="${y + 28}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${style.accent}">${escHtml(String(s.stapNr))}</text>
         ${nameLinesHtml}
       </g>`;
     }
   }
 
-  return `<svg id="procFlowSvg" viewBox="0 0 ${svgWidth} ${svgHeight}" data-nw="${svgWidth}" style="height:auto;display:block;margin:0 auto;" xmlns="http://www.w3.org/2000/svg">
+  return `<svg id="procFlowSvg" viewBox="0 0 ${svgWidth} ${svgHeight}" data-nw="${svgWidth}" style="height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="proc-arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
         <path d="M0,0 L9,4.5 L0,9 Z" fill="#A7B8CE"/>
@@ -1129,17 +1221,19 @@ function renderProcessFlowSVG(steps, layerMap, groups, selectedStapNr) {
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#002E56" flood-opacity="0.12"/>
       </filter>
     </defs>
+    ${laneBg}
     ${arrows}
     ${boxes}
   </svg>`;
 }
 
 const NORMAAL_LEGEND = `
-  <span><i style="background:#1D9E75;"></i>Start / melding</span>
+  <span><i style="background:#1D9E75;border-radius:50%;"></i>Start (event)</span>
   <span><i style="background:#005496;"></i>Processtap</span>
-  <span><i style="background:#F26722;"></i>Beslissing</span>
   <span><i style="background:#7F77DD;"></i>Actie / taak</span>
-  <span><i style="background:#0B6E49;"></i>Einde / besluit</span>`;
+  <span><i style="background:#F26722;transform:rotate(45deg);"></i>Gateway (beslissing)</span>
+  <span><i style="background:#4A6180;border:1px dashed #4A6180;background:transparent;"></i>Vervolgproces</span>
+  <span><i style="background:#0B6E49;border-radius:50%;"></i>Einde (event)</span>`;
 
 /* Kleuren per fase-categorie (MensCentraal) — zelfde huisstijlpalet
    als de rest van de app. 'header' is de donkere fase-balk (witte
@@ -1412,9 +1506,9 @@ function renderNormFlow(p, selectedStapNr) {
   const keep = prev ? { l: prev.scrollLeft, t: prev.scrollTop } : null;
 
   const layerMap = computeStepLayers(p.steps);
-  const groups = groupByLayer(p.steps, layerMap);
+  const lanes = computeLaneOrder(p.steps, layerMap);
   wrap.innerHTML = flowToolbarHtml() +
-    `<div class="flow-scroll" id="flowScroll">${renderProcessFlowSVG(p.steps, layerMap, groups, selectedStapNr)}</div>`;
+    `<div class="flow-scroll" id="flowScroll">${renderProcessFlowSVG(p.steps, layerMap, lanes, selectedStapNr)}</div>`;
 
   if (procZoom === 'fit') {
     const svg = document.getElementById('procFlowSvg');
@@ -1740,6 +1834,17 @@ function initInteractions() {
     if (mcJump) { selectMcFase(parseInt(mcJump.dataset.mcjump, 10)); return; }
     const mcFase = ev.target.closest('[data-mcfase]');
     if (mcFase) { selectMcFase(parseInt(mcFase.dataset.mcfase, 10)); return; }
+    // Vervolgproces-kader (subproces-type) met een geldige verwijzing:
+    // springt naar dat proces i.p.v. alleen de stap te selecteren.
+    const gotoBox = ev.target.closest('[data-goto-proc]');
+    if (gotoBox) {
+      const targetId = gotoBox.dataset.gotoProc;
+      if (procEntries.some(pr => pr.id === targetId)) {
+        renderProcList();
+        selectProcEntry(targetId);
+      }
+      return;
+    }
     const g = ev.target.closest('[data-stapnr]');
     if (g) selectProcStep(parseInt(g.dataset.stapnr, 10));
   });
