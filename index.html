@@ -169,7 +169,8 @@
 <!-- ============== PROCESSEN ============== -->
 <div id="view-processen" class="proc-view proc-view-flat">
 
-  <div class="proc-content">
+  <!-- Tegelpagina: alle processen als doorzoekbare tegels -->
+  <div id="procTilesView" class="proc-tiles-view active">
     <div class="proc-toolbar">
       <div class="dv-search-wrap">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -183,27 +184,42 @@
       <select class="dv-fi-sel" id="procFilterTeam" onchange="renderProcList()"><option value="">Alle teams</option></select>
       <span class="dv-count" id="procCountLabel">— processen</span>
     </div>
-    <div class="proc-main">
-      <div class="proc-list-panel" id="procList"></div>
-      <div class="proc-detail-panel" id="procDetailPanel">
-        <div class="proc-detail-empty" id="procDetailEmpty">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#005496" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="M12 7v4M10.5 17.5L7 16M13.5 17.5L17 16"></path></svg>
-          <p>Selecteer een proces</p>
-          <span class="detail-empty-hint">Klik op een proces in de lijst hiernaast</span>
+    <div class="proc-tiles-scroll">
+      <div class="proc-tiles-grid" id="procList"></div>
+    </div>
+  </div>
+
+  <!-- Fullscreen procesweergave: opent bij klikken op een tegel. De
+       blauwe hoofdbalk (buiten deze view) blijft altijd zichtbaar. -->
+  <div id="procFullscreenView" class="proc-fullscreen-view">
+    <div class="pf-nav">
+      <button type="button" class="pf-back" id="procBackBtn" title="Terug naar alle processen">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+        Alle processen
+      </button>
+      <div class="pf-divider"></div>
+      <span class="bdg bdg-leeg pf-badge" id="procDetailTeamBadge"></span>
+      <div class="pf-titles">
+        <div class="pf-nm" id="procDetailTitle"></div>
+        <div class="pf-ds" id="procDetailDesc"></div>
+      </div>
+      <div class="pf-tools" id="procZoomTools"></div>
+    </div>
+
+    <div class="pf-canvas-stack">
+      <div id="procFlowWrap" class="pf-canvas-wrap"></div>
+      <div class="pf-step-panel" id="procStepPanel">
+        <div class="pf-step-panel-hdr">
+          <span>Stapdetail</span>
+          <button type="button" class="pf-step-panel-close" id="procStepPanelClose" title="Sluiten">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+          </button>
         </div>
-        <div id="procDetailContent" style="display:none;flex:1;min-height:0;flex-direction:column;">
-          <div class="proc-detail-header">
-            <span class="bdg bdg-leeg" id="procDetailTeamBadge"></span>
-            <div class="dash-modal-title" id="procDetailTitle"></div>
-            <div class="proc-modal-sub" id="procDetailSub"></div>
-          </div>
-          <div class="detail-text" id="procDetailDesc"></div>
-          <div class="proc-legend" id="procDetailLegend"></div>
-          <div id="procFlowWrap" style="padding:8px 0;"></div>
-          <div id="procStepDetail"></div>
-        </div>
+        <div class="pf-step-panel-body" id="procStepDetail"></div>
       </div>
     </div>
+
+    <div class="pf-legend" id="procDetailLegend"></div>
   </div>
 </div>
 
