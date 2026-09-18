@@ -1127,18 +1127,28 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         const bowY = bowUp ? Math.min(y1, y2) - bow : Math.max(y1, y2) + bow;
         path = `M ${x1} ${y1} C ${x1 + 50} ${bowY}, ${x2 - 50} ${bowY}, ${x2 - 2} ${y2}`;
         labelX = midX;
-        labelY = bowY + (bowUp ? 4 : -4);
+        // Het label hoort op het werkelijke midden van de kromme (t=0.5),
+        // niet op bowY zelf: als bron en doel ver uit elkaar liggen in
+        // hoogte (bv. een boog die twee rijbanen overslaat) ligt de curve
+        // bij x=midX helemaal niet op bowY maar veel dichter bij het
+        // gemiddelde van y1 en y2 — anders zweeft het labelchipje los van
+        // de lijn. Cubic bezier op t=0.5: (y1 + 6*bowY + y2) / 8.
+        const bowMidY = (y1 + 6 * bowY + y2) / 8;
+        labelY = bowMidY + (bowUp ? 4 : -4);
       } else if (y1 === y2) {
         path = `M ${x1} ${y1} L ${x2 - 2} ${y2}`;
         labelX = midX;
         labelY = y1 - 16;
       } else {
         // Rijbaan-wissel binnen één kolomsprong: vloeiende S-curve, label
-        // dichter bij de bestemming (t=0.6) zodat vertakkingen vanuit
+        // dicht bij de bestemming (t=0.78) zodat vertakkingen vanuit
         // dezelfde gateway — die allemaal bij hetzelfde punt vertrekken —
-        // al voldoende verticaal uit elkaar liggen om niet te overlappen.
+        // al voldoende verticaal uit elkaar liggen om niet te overlappen, én
+        // zodat een label voor een ver/laag doel niet binnen de verticale
+        // ruimte van een dichterbij/hoger gelegen kaart terechtkomt die de
+        // boog toevallig onderweg passeert.
         path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 - 2} ${y2}`;
-        const t = 0.6;
+        const t = 0.78;
         labelX = x1 + (x2 - x1) * t;
         labelY = y1 + (y2 - y1) * t + (y2 > y1 ? 13 : -13);
       }
