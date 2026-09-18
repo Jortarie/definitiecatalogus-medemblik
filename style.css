@@ -600,38 +600,67 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
      krijgt het navy accent. */
   .proc-view{display:none;flex:1 1 0;min-height:0;position:relative;overflow:hidden;background:var(--lg);}
   .proc-view.active{display:flex;flex-direction:column;}
-  .proc-content{position:relative;z-index:1;flex:1;min-height:0;padding:24px 28px 28px;display:flex;flex-direction:column;gap:14px;}
   .proc-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:0 0 auto;}
-  /* Sinds de ruimte-verfijning vormen lijst en detailpaneel samen ÉÉN
-     aaneengesloten kaart (één rand/schaduw op .proc-main) in plaats van
-     twee losse "vakken" met marge ertussen — alleen een dunne verticale
-     scheidingslijn (border-right op .proc-list-panel) knipt de twee
-     helften nog van elkaar. Dat wint zowel breedte als rust: het canvas
-     rechts krijgt zo veel meer horizontale/verticale ruimte. */
-  .proc-main{flex:1;min-height:0;display:flex;gap:0;background:rgba(255,255,255,.98);border-radius:14px;box-shadow:0 2px 10px rgba(0,46,86,.12);overflow:hidden;}
 
-  .proc-list-panel{flex:0 0 232px;max-width:232px;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:12px 10px;background:var(--lg);border-right:1px solid var(--bd);}
-  .proc-list-panel::-webkit-scrollbar{width:4px;}
-  .proc-list-panel::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+  /* ── Tegelpagina (sinds 18 sept 2026, ronde 4): Processen opent nu
+     als een doorzoekbaar overzicht van tegels i.p.v. een vaste
+     lijst+detail-layout. Eén tegel aanklikken opent het proces
+     fullscreen (zie .proc-fullscreen-view hieronder). ────────────── */
+  .proc-tiles-view{display:none;flex:1;min-height:0;flex-direction:column;position:relative;z-index:1;}
+  .proc-tiles-view.active{display:flex;}
+  .proc-tiles-scroll{flex:1;min-height:0;overflow-y:auto;padding:20px 24px 28px;}
+  .proc-tiles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px;max-width:1520px;margin:0 auto;}
 
-  .proc-card{background:#fff;border-radius:10px;padding:11px 13px;cursor:pointer;transition:transform .12s, box-shadow .12s, border-color .12s;box-shadow:0 1px 4px rgba(0,46,86,.08);border:2px solid transparent;}
-  .proc-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,46,86,.14);}
-  .proc-card.selected{border-color:#005496;box-shadow:0 4px 14px rgba(0,84,150,.18);}
-  .proc-card-name{font-weight:800;color:var(--n);font-size:.86rem;margin-bottom:3px;}
-  .proc-card-desc{font-size:.72rem;color:var(--sub);line-height:1.45;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-  .proc-card-foot{display:flex;align-items:center;justify-content:space-between;font-size:.66rem;color:var(--sub);gap:6px;}
-  .proc-card-steps{background:#fff;color:var(--n);font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap;border:1px solid var(--bd);}
+  .proc-tile{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:15px 16px;cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s;position:relative;}
+  .proc-tile:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,46,86,.12);border-color:var(--s);}
+  .proc-tile-active{border-color:var(--s);box-shadow:0 4px 14px rgba(0,84,150,.16);}
+  .proc-tile-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;}
+  .proc-tile-team{font-size:.6rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--s);background:#E6F1FB;padding:3px 9px;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .proc-tile-naam{font-weight:800;color:var(--n);font-size:.86rem;line-height:1.32;margin-bottom:5px;min-height:2.3em;}
+  .proc-tile-desc{font-size:.72rem;color:var(--sub);line-height:1.45;margin-bottom:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .proc-tile-meta{display:flex;align-items:center;justify-content:space-between;font-size:.66rem;color:var(--sub);font-weight:600;padding-top:9px;border-top:1px solid var(--lg);}
+  .proc-tile-arrow{display:flex;color:var(--s);opacity:0;transition:opacity .12s,transform .12s;}
+  .proc-tile:hover .proc-tile-arrow{opacity:1;transform:translateX(2px);}
 
-  .proc-detail-panel{flex:1 1 0;min-width:0;min-height:0;background:transparent;display:flex;flex-direction:column;overflow-y:auto;padding:16px 18px 18px;}
-  .proc-detail-panel::-webkit-scrollbar{width:4px;}
-  .proc-detail-panel::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
-  .proc-detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--sub);text-align:center;padding:40px;}
-  .proc-detail-empty p{font-weight:700;color:var(--n);margin:0;font-size:.9rem;}
-  .proc-detail-header{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
+  /* ── Fullscreen procesweergave: dunne navbalk (terug/titel/zoom) +
+     canvas dat de volledige resterende hoogte vult. De blauwe
+     hoofdbalk van de site zit hier niet in — die staat buiten
+     #view-processen en blijft dus altijd zichtbaar. ────────────── */
+  .proc-fullscreen-view{display:none;flex:1;min-height:0;flex-direction:column;position:relative;z-index:1;background:var(--lg);}
+  .proc-fullscreen-view.active{display:flex;}
 
-  .proc-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.72rem;color:var(--sub);padding:7px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);flex:0 0 auto;}
-  .proc-legend span{display:flex;align-items:center;gap:6px;}
-  .proc-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .pf-nav{flex:0 0 52px;background:#fff;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;padding:0 18px;}
+  .pf-back{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:.74rem;font-weight:700;color:var(--sub);background:var(--lg);border:1px solid var(--bd);border-radius:9px;padding:7px 12px 7px 10px;cursor:pointer;flex:0 0 auto;transition:all .12s;}
+  .pf-back:hover{background:var(--bd);color:var(--n);}
+  .pf-divider{width:1px;height:24px;background:var(--bd);flex:0 0 auto;}
+  .pf-badge{flex:0 0 auto;}
+  .pf-titles{flex:1;min-width:0;}
+  .pf-nm{font-size:.86rem;font-weight:800;color:var(--n);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pf-ds{font-size:.68rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+  .pf-tools{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .pf-zoom-grp{display:flex;align-items:center;gap:1px;background:var(--lg);border:1px solid var(--bd);border-radius:9px;padding:3px;}
+  .pf-zbtn{width:25px;height:25px;display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;border-radius:6px;font:800 .85rem 'Plus Jakarta Sans',Arial,sans-serif;color:var(--sub);cursor:pointer;transition:all .12s;}
+  .pf-zbtn:hover{background:#fff;color:var(--s);}
+  .pf-zval{font-size:.66rem;font-weight:700;color:var(--n);min-width:36px;text-align:center;}
+  .pf-fitbtn{display:flex;align-items:center;gap:5px;font-family:inherit;font-size:.68rem;font-weight:700;color:var(--s);background:#E6F1FB;border:1px solid #cfe3f5;border-radius:9px;padding:6px 11px;cursor:pointer;transition:background .12s;}
+  .pf-fitbtn:hover{background:#d7e9f8;}
+
+  .pf-canvas-stack{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden;}
+  .pf-scroll{flex:1;min-height:0;overflow:auto;}
+
+  /* Stapdetail: schuift in als paneel over het canvas i.p.v. permanent
+     ruimte in te nemen — zo blijft het diagram zelf altijd maximaal
+     groot, ook terwijl je stappen doorklikt. */
+  .pf-step-panel{position:absolute;top:0;right:0;bottom:0;width:340px;max-width:88vw;background:#fff;border-left:1px solid var(--bd);box-shadow:-10px 0 28px rgba(0,46,86,.14);display:flex;flex-direction:column;z-index:5;transform:translateX(100%);transition:transform .18s ease;}
+  .pf-step-panel.open{transform:translateX(0);}
+  .pf-step-panel-hdr{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--bd);font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sub);}
+  .pf-step-panel-close{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:1px solid var(--bd);background:var(--lg);border-radius:7px;color:var(--sub);cursor:pointer;transition:all .12s;}
+  .pf-step-panel-close:hover{border-color:#E24B4A;color:#E24B4A;}
+  .pf-step-panel-body{flex:1;min-height:0;overflow-y:auto;padding:15px 16px 18px;}
+
+  .pf-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:.7rem;color:var(--sub);padding:8px 18px;border-top:1px solid var(--bd);background:#fff;flex:0 0 auto;}
+  .pf-legend span{display:flex;align-items:center;gap:6px;}
+  .pf-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
 
   /* Type-badge op proceskaarten (Normaal / MensCentraal) */
   .proc-type-badge{font-size:.56rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:8px;padding:2px 8px;white-space:nowrap;flex-shrink:0;background:var(--lg);color:var(--sub);border:1px solid var(--bd);}
@@ -693,13 +722,14 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
     .detail-panel{flex:0 0 540px !important;max-width:540px;}
     .dv-detail-panel{flex:0 0 500px !important;max-width:500px;}
     .dash-detail{flex:0 0 480px !important;}
-    .proc-list-panel{flex:0 0 264px !important;max-width:264px;}
+    .proc-tiles-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+    .pf-step-panel{width:380px;}
   }
   @media (max-width:1280px){
     .detail-panel{flex:0 0 360px !important;}
     .dv-detail-panel{flex:0 0 340px !important;}
     .dash-detail{flex:0 0 320px !important;}
-    .proc-list-panel{flex:0 0 204px !important;max-width:204px;}
+    .proc-tiles-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
   }
 
   /* ── Home / startpagina ───────────────────────────────────────── */
@@ -742,34 +772,26 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
   .home-about-text{font-size:.76rem;line-height:1.6;color:var(--n);}
 
 /* ── Procesflow: canvas-gevoel + hover ─────────────────────────── */
-/* #procFlowWrap is zelf een flex-kolom (toolbar vast, canvas rekt mee)
-   zodat het canvas altijd de resterende hoogte van het detailpaneel
-   opvult i.p.v. op een vaste vh-waarde te stoppen — dat is waarom
-   "Passend" voorheen al snel op 45-60% uitkwam op een normaal scherm. */
+/* #procFlowWrap vult sinds de fullscreen-herbouw de volledige
+   .pf-canvas-stack (zelf weer alles onder de navbalk/boven de
+   legenda) — geen toolbar meer hierbinnen, die staat vast in #pf-nav,
+   dus dit is puur nog de canvas-achtergrond + layout-drager. */
 #procFlowWrap{
   flex:1;min-height:0;display:flex;flex-direction:column;
   background-image:radial-gradient(circle, #D6DEE9 1px, transparent 1px);
   background-size:22px 22px;
   background-position:center;
-  border-radius:12px;
-  padding:10px 6px;
 }
 .proc-node{cursor:pointer;}
 .proc-node:hover rect:not([fill="none"]){filter:url(#proc-shadow) brightness(0.985);}
 .proc-node{transition:opacity .12s;}
 
 /* ============================================================
-   Processen 2.0 — zoombalk (normale processen) en horizontale
-   MensCentraal-tijdlijn met detailblok
+   Processen 2.0 — scrollcanvas (normale processen) en horizontale
+   MensCentraal-tijdlijn met detailblok. De zoomknoppen zelf staan
+   vast in de navbalk (.pf-zoom-grp/.pf-fitbtn, style.css elders).
    ============================================================ */
-
-/* Zoombalk + scrollcanvas voor SVG-processen */
-.flow-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:5px;margin:0 0 8px;flex:0 0 auto;}
-.flow-zbtn{width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--bd);background:#fff;border-radius:7px;font:800 .85rem 'Plus Jakarta Sans',Arial,sans-serif;color:var(--sub);cursor:pointer;transition:all .12s;}
-.flow-zbtn-txt{width:auto;padding:0 10px;font-size:.62rem;font-weight:700;letter-spacing:.02em;}
-.flow-zbtn:hover{border-color:#005496;color:#005496;}
-.flow-zlabel{font-size:.66rem;font-weight:700;color:var(--sub);min-width:38px;text-align:center;}
-.flow-scroll{overflow:auto;flex:1;min-height:280px;border-radius:12px;padding:20px 16px;
+.flow-scroll{overflow:auto;flex:1;min-height:280px;padding:24px 20px;
   background-image:radial-gradient(circle, #C7D3E4 1.3px, transparent 1.3px);
   background-size:24px 24px;background-position:center;}
 
@@ -833,7 +855,6 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
    paar zoveel mogelijk hoogte overhoudt. */
 .proc-view-flat{background:var(--lg);}
 .proc-view-flat .proc-toolbar{background:var(--w);border-bottom:1px solid var(--bd);height:52px;flex:0 0 52px;padding:0 20px;margin:0;}
-.proc-view-flat .proc-content{padding:0 20px 16px;gap:12px;}
 .proc-view-flat .dv-search-wrap{background:var(--lg) !important;}
 .proc-view-flat .dv-fi-sel{background:var(--w) !important;}
 .proc-view-flat #procCountLabel{color:var(--sub) !important;}
