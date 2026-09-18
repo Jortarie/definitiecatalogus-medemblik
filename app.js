@@ -881,30 +881,39 @@ function renderProcList() {
   const list = document.getElementById('procList');
   if (filtered.length === 0) {
     list.innerHTML = procEntries.length === 0
-      ? `<div class="empty-state" style="color:#fff;">Nog geen processen — voeg rijen toe aan het 'processen'-tabblad in Google Sheets.</div>`
-      : `<div class="empty-state" style="color:#fff;">Geen processen gevonden.</div>`;
+      ? `<div class="empty-state">Nog geen processen — voeg rijen toe aan het 'processen'-tabblad in Google Sheets.</div>`
+      : `<div class="empty-state">Geen processen gevonden.</div>`;
     return;
   }
 
   list.innerHTML = filtered.map(p => {
     const isMc = p.type === 'menscentraal';
-    const countLabel = isMc
-      ? `${p.fases.length} fases · ${p.fases.reduce((n, f) => n + f.vragen.length, 0)} vragen`
-      : `${p.steps.length} stappen`;
-    const typeBadge = isMc
-      ? `<span class="proc-type-badge mc">MensCentraal</span>`
-      : `<span class="proc-type-badge">Normaal</span>`;
-    const sel = p.id === currentProcId ? ' selected' : '';
+    let countLabel;
+    if (isMc) {
+      countLabel = `${p.fases.length} fases · ${p.fases.reduce((n, f) => n + f.vragen.length, 0)} vragen`;
+    } else {
+      // Rijbanen tellen we hetzelfde als bij het tekenen van het diagram
+      // (computeStepLayers/computeLaneOrder), zodat de tegel exact
+      // aansluit op wat je straks in de fullscreen-weergave ziet.
+      const layerMap = computeStepLayers(p.steps);
+      const laneCount = computeLaneOrder(p.steps, layerMap).length;
+      countLabel = `${p.steps.length} stappen · ${laneCount} rijba${laneCount === 1 ? 'an' : 'nen'}`;
+    }
+    const typeBadge = isMc ? `<span class="proc-type-badge mc">MensCentraal</span>` : '';
+    const sel = p.id === currentProcId ? ' proc-tile-active' : '';
     return `
-    <div class="proc-card${sel}" data-id="${escHtml(p.id)}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-        <div class="proc-card-name">${hlHtml(p.naam, q)}</div>
+    <div class="proc-tile${sel}" data-id="${escHtml(p.id)}">
+      <div class="proc-tile-top">
+        <span class="proc-tile-team">${hlHtml(p.team, q) || '—'}</span>
         ${typeBadge}
       </div>
-      <div class="proc-card-desc">${hlHtml(p.desc, q) || 'Geen beschrijving'}</div>
-      <div class="proc-card-foot">
-        <span>${hlHtml(p.team, q) || '—'}</span>
-        <span class="proc-card-steps">${countLabel}</span>
+      <div class="proc-tile-naam">${hlHtml(p.naam, q)}</div>
+      <div class="proc-tile-desc">${hlHtml(p.desc, q) || 'Geen beschrijving'}</div>
+      <div class="proc-tile-meta">
+        <span>${countLabel}</span>
+        <span class="proc-tile-arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </span>
       </div>
     </div>`;
   }).join('');
@@ -1541,18 +1550,24 @@ function onMcSearchInput(value) {
 
 /* ── Zoom voor normale (SVG-)processen ──────────────────────────
    'fit' = passend in het paneel; een getal = vaste schaal. Bij het
-   openen van een proces starten we passend, maar nooit onleesbaar
-   klein: onder 70%% schakelen we naar 100%% met scrollen. */
+   openen van een proces starten we altijd passend (zie openProcFullscreen),
+   maar nooit onleesbaar klein: onder 70%% schakelen we naar 100%% met
+   scrollen. De zoomknoppen zelf staan sinds de fullscreen-herbouw (18
+   sept 2026) niet meer in het canvas maar vast in de witte navbalk
+   boven het proces (#procZoomTools), zodat ze nooit meescrollen en
+   overeind blijven staan als het diagram opnieuw wordt getekend. */
 let procZoom = 'fit';
 
-function flowToolbarHtml() {
-  return `<div class="flow-toolbar">
-    <button type="button" class="flow-zbtn" data-zoom="out" title="Uitzoomen">−</button>
-    <span class="flow-zlabel" id="flowZoomLabel"></span>
-    <button type="button" class="flow-zbtn" data-zoom="in" title="Inzoomen">+</button>
-    <button type="button" class="flow-zbtn flow-zbtn-txt" data-zoom="100" title="Ware grootte">100%</button>
-    <button type="button" class="flow-zbtn flow-zbtn-txt" data-zoom="fit" title="Passend in beeld">Passend</button>
-  </div>`;
+function pfZoomToolsHtml() {
+  return `<div class="pf-zoom-grp">
+      <button type="button" class="pf-zbtn" data-zoom="out" title="Uitzoomen">−</button>
+      <span class="pf-zval" id="flowZoomLabel"></span>
+      <button type="button" class="pf-zbtn" data-zoom="in" title="Inzoomen">+</button>
+    </div>
+    <button type="button" class="pf-fitbtn" data-zoom="fit" title="Passend in beeld">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"></path></svg>
+      Passend
+    </button>`;
 }
 
 function applyProcZoom() {
@@ -1580,8 +1595,10 @@ function setProcZoom(action) {
   applyProcZoom();
 }
 
-/* Bouwt zoombalk + scrollcanvas + SVG en behoudt bij herbouw (stap
-   aanklikken) de scrollpositie en zoomstand. */
+/* Bouwt het scrollcanvas + SVG en behoudt bij herbouw (stap aanklikken)
+   de scrollpositie en zoomstand. De zoombalk zelf zit niet meer hierin
+   (zie pfZoomToolsHtml/#procZoomTools), dus die hoeft niet steeds
+   opnieuw opgebouwd te worden. */
 function renderNormFlow(p, selectedStapNr) {
   const wrap = document.getElementById('procFlowWrap');
   const prev = document.getElementById('flowScroll');
@@ -1589,8 +1606,7 @@ function renderNormFlow(p, selectedStapNr) {
 
   const layerMap = computeStepLayers(p.steps);
   const lanes = computeLaneOrder(p.steps, layerMap);
-  wrap.innerHTML = flowToolbarHtml() +
-    `<div class="flow-scroll" id="flowScroll">${renderProcessFlowSVG(p.steps, layerMap, lanes, selectedStapNr)}</div>`;
+  wrap.innerHTML = `<div class="flow-scroll" id="flowScroll">${renderProcessFlowSVG(p.steps, layerMap, lanes, selectedStapNr)}</div>`;
 
   if (procZoom === 'fit') {
     const svg = document.getElementById('procFlowSvg');
@@ -1601,46 +1617,66 @@ function renderNormFlow(p, selectedStapNr) {
   if (keep) { const s = document.getElementById('flowScroll'); s.scrollLeft = keep.l; s.scrollTop = keep.t; }
 }
 
-/* Toont een proces in het vaste detailpaneel naast de lijst (geen
-   popup meer). Dubbelklik-bestendig: opnieuw klikken op hetzelfde
-   proces bouwt het gewoon opnieuw op, dat is goedkoop genoeg. */
-function selectProcEntry(id) {
+/* ====================================================================
+   PROCESSEN — fullscreen weergave (sinds 18 sept 2026, ronde 4).
+   Vervangt de oude vaste lijst+detail-layout: Processen opent nu als
+   een doorzoekbare tegelpagina (renderProcList hierboven); een tegel
+   aanklikken opent het proces fullscreen, met alleen een dunne navbalk
+   erboven (terug + titel/omschrijving + zoom) — de blauwe hoofdbalk
+   van de site blijft daarbij altijd staan, dat is de gewone
+   view-processen/switchMainTab-laag erboven, die raken we hier niet
+   aan. Terug klikken bewaart de zoek/filterstand van de tegelpagina.
+   ==================================================================== */
+function openProcFullscreen(id) {
   currentProcId = id;
   const p = procEntries.find(x => x.id === id);
   if (!p) return;
 
-  document.getElementById('procDetailEmpty').style.display = 'none';
-  const content = document.getElementById('procDetailContent');
-  content.style.display = 'flex';
+  document.getElementById('procTilesView').classList.remove('active');
+  document.getElementById('procFullscreenView').classList.add('active');
 
   document.getElementById('procDetailTitle').textContent = p.naam;
   document.getElementById('procDetailTeamBadge').textContent = p.team || '—';
   document.getElementById('procDetailDesc').textContent = p.desc || '';
-  document.getElementById('procStepDetail').innerHTML = '';
+  closeProcStepPanel();
 
   const flowWrap = document.getElementById('procFlowWrap');
   const legend = document.getElementById('procDetailLegend');
-  const sub = document.getElementById('procDetailSub');
+  const zoomTools = document.getElementById('procZoomTools');
   if (p.type === 'menscentraal') {
+    zoomTools.innerHTML = ''; // MensCentraal heeft geen zoom, dat is een horizontale tijdlijn
     mcSelectedFase = p.fases.length ? p.fases[0].nr : null;
     mcSearchQuery = '';
-    flowWrap.innerHTML = `<div class="mc-container">${mcToolbarHtml(p)}<div id="mcFlowInner"></div></div>`;
+    flowWrap.innerHTML = `<div class="pf-scroll"><div class="mc-container">${mcToolbarHtml(p)}<div id="mcFlowInner"></div></div></div>`;
     renderMcFlow(p);
     legend.innerHTML = mcLegendHtml(p);
-    const totalVragen = p.fases.reduce((n, f) => n + f.vragen.length, 0);
-    sub.textContent = `${p.fases.length} zaakstappen · ${totalVragen} vragen — klik op een stap voor de bijbehorende vragen`;
   } else {
+    zoomTools.innerHTML = pfZoomToolsHtml();
+    // "Begin altijd bij passend scherm": elk proces opent op de
+    // pas-in-beeld-zoom, nooit op de laatst onthouden stand.
     procZoom = 'fit';
     renderNormFlow(p, null);
     legend.innerHTML = NORMAAL_LEGEND;
-    sub.textContent = `${p.steps.length} stappen — klik op een stap voor detail, zoom met + en −`;
   }
+}
 
-  // Selectie in de lijst zelf ook bijwerken zonder alles opnieuw te
-  // filteren/renderen (voorkomt dat het zoekveld/scrollpositie springt).
-  document.querySelectorAll('#procList .proc-card').forEach(card => {
-    card.classList.toggle('selected', card.dataset.id === id);
+/* Terug naar de tegelpagina. De tegel van het zojuist bekeken proces
+   blijft gemarkeerd (currentProcId blijft staan) zodat je 'm makkelijk
+   terugvindt, maar we bouwen de lijst niet opnieuw op — dat zou de
+   scrollpositie/zoekstand van de tegelpagina resetten. */
+function closeProcFullscreen() {
+  document.getElementById('procFullscreenView').classList.remove('active');
+  document.getElementById('procTilesView').classList.add('active');
+  document.querySelectorAll('#procList .proc-tile').forEach(tile => {
+    tile.classList.toggle('proc-tile-active', tile.dataset.id === currentProcId);
   });
+}
+
+/* Backwards-compatible alias: de rest van de app (chip-navigatie vanaf
+   Home, "Vervolgproces"-kaders in het canvas) roept nog altijd
+   selectProcEntry aan om een proces te openen. */
+function selectProcEntry(id) {
+  openProcFullscreen(id);
 }
 
 function selectProcStep(stapNr) {
@@ -1662,14 +1698,19 @@ function selectProcStep(stapNr) {
     : '';
 
   document.getElementById('procStepDetail').innerHTML = `
-    <div class="dash-modal-meta-grid" style="grid-template-columns:1fr;">
-      <div class="meta-item">
-        <div class="meta-key">Stap ${step.stapNr} — ${escHtml(step.stapNaam)}</div>
-        ${subHtml}
-        <div class="meta-val" style="font-weight:400;margin-top:8px;white-space:pre-wrap;">${escHtml(step.stapDesc) || (step.stapVragen.length === 0 ? 'Geen toelichting opgegeven.' : '')}</div>
-        ${vragenHtml}
-      </div>
+    <div class="meta-item">
+      <div class="meta-key">Stap ${step.stapNr} — ${escHtml(step.stapNaam)}</div>
+      ${subHtml}
+      <div class="meta-val" style="font-weight:400;margin-top:8px;white-space:pre-wrap;">${escHtml(step.stapDesc) || (step.stapVragen.length === 0 ? 'Geen toelichting opgegeven.' : '')}</div>
+      ${vragenHtml}
     </div>`;
+  document.getElementById('procStepPanel').classList.add('open');
+}
+
+function closeProcStepPanel() {
+  const panel = document.getElementById('procStepPanel');
+  panel.classList.remove('open');
+  document.getElementById('procStepDetail').innerHTML = '';
 }
 
 /* ====================================================================
@@ -1906,10 +1947,17 @@ function initInteractions() {
   byRow('dvTableBody', selectDvEntry);
   byRow('dashTableBody', selectDashEntry);
   document.getElementById('procList').addEventListener('click', ev => {
-    const card = ev.target.closest('[data-id]');
-    if (card) selectProcEntry(card.dataset.id);
+    const tile = ev.target.closest('[data-id]');
+    if (tile) openProcFullscreen(tile.dataset.id);
   });
-  document.getElementById('procFlowWrap').addEventListener('click', ev => {
+  // Eén gedelegeerde listener op de hele fullscreen-view: die dekt zowel
+  // de navbalk (terug-knop, zoomknoppen — die zitten buiten #procFlowWrap
+  // sinds de zoombalk vast bovenin staat) als het canvas zelf en het
+  // stapdetail-paneel, ongeacht hoe vaak #procFlowWrap opnieuw wordt
+  // opgebouwd bij het aanklikken van een stap.
+  document.getElementById('procFullscreenView').addEventListener('click', ev => {
+    if (ev.target.closest('#procBackBtn')) { closeProcFullscreen(); return; }
+    if (ev.target.closest('#procStepPanelClose')) { closeProcStepPanel(); return; }
     const zoomBtn = ev.target.closest('[data-zoom]');
     if (zoomBtn) { setProcZoom(zoomBtn.dataset.zoom); return; }
     const mcJump = ev.target.closest('[data-mcjump]');
@@ -1923,7 +1971,7 @@ function initInteractions() {
       const targetId = gotoBox.dataset.gotoProc;
       if (procEntries.some(pr => pr.id === targetId)) {
         renderProcList();
-        selectProcEntry(targetId);
+        openProcFullscreen(targetId);
       }
       return;
     }
@@ -1931,8 +1979,8 @@ function initInteractions() {
     if (g) selectProcStep(parseInt(g.dataset.stapnr, 10));
   });
   // Zoeken binnen een MensCentraal-proces: input-delegatie zodat de
-  // listener ook werkt nadat het detailpaneel opnieuw is opgebouwd.
-  document.getElementById('procFlowWrap').addEventListener('input', ev => {
+  // listener ook werkt nadat het canvas opnieuw is opgebouwd.
+  document.getElementById('procFullscreenView').addEventListener('input', ev => {
     if (ev.target && ev.target.id === 'mcSearchInput') onMcSearchInput(ev.target.value);
   });
   document.getElementById('dFields').addEventListener('click', ev => {
