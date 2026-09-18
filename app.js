@@ -1020,8 +1020,8 @@ function wrapToTwoLines(str, maxCharsPerLine) {
 }
 
 function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
-  const boxW = 208, cardH = 78, lineHeight = 16, colGap = 44, cellH = 118, padding = 40;
-  const laneLabelW = 40;
+  const boxW = 212, cardH = 80, lineHeight = 16, colGap = 112, cellH = 176, padding = 46;
+  const laneLabelW = 42;
 
   const wrapped = new Map();
   for (const s of steps) wrapped.set(s.stapNr, wrapToTwoLines(s.stapNaam, 19));
@@ -1076,7 +1076,34 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
     return { bg: '#E6F1FB', border: '#B5D4F4', text: '#185FA5' };
   }
 
+  // Lange vertakkingslabels (bijv. "Maatwerkovereenkomst") over twee
+  // regels breken i.p.v. één brede chip die in de buurbaan/-kolom
+  // steekt — voorkomt overlap met kaarten links/rechts van de kier.
+  // Eén lang los woord (geen spatie) wordt zo nodig met een koppelteken
+  // doormidden geknipt, anders zou de chip zelf te breed blijven.
+  function wrapLabel(label) {
+    if (label.length <= 13) return [label];
+    const words = label.split(/\s+/);
+    if (words.length === 1) {
+      const mid = Math.ceil(label.length / 2);
+      return [label.slice(0, mid) + '-', label.slice(mid)];
+    }
+    let l1 = '', i = 0;
+    for (; i < words.length; i++) {
+      const cand = l1 ? `${l1} ${words[i]}` : words[i];
+      if (cand.length > 13 && l1) break;
+      l1 = cand;
+    }
+    const l2 = words.slice(i).join(' ');
+    return l2 ? [l1, l2] : [l1];
+  }
+
+  // Pijllijnen en labels apart bijhouden: labels worden helemaal aan het
+  // eind (ná de kaarten/vormen) getekend, zodat een label-chipje nooit
+  // onder een kaart of een andere pijl kan wegvallen — SVG tekent later
+  // opgegeven elementen bovenop eerdere.
   let arrows = '';
+  let arrowLabels = '';
   for (const s of steps) {
     const from = pos.get(s.stapNr);
     s.volgendeStap.forEach((nextNr, idx) => {
@@ -1086,24 +1113,47 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
       const x1 = from.cx + halfW(s.stapType), y1 = from.cy;
       const toStep = steps.find(x => x.stapNr === nextNr);
       const x2 = to.cx - halfW(toStep ? toStep.stapType : ''), y2 = to.cy;
+      const layerDist = Math.abs(layerMap.get(nextNr) - layerMap.get(s.stapNr));
       const midX = (x1 + x2) / 2;
-      const path = y1 === y2
-        ? `M ${x1} ${y1} L ${x2 - 2} ${y2}`
-        : `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 - 2} ${y2}`;
-      arrows += `<path d="${path}" fill="none" stroke="#A7B8CE" stroke-width="2" marker-end="url(#proc-arrowhead)"/>`;
+
+      let path, labelX, labelY;
+      if (layerDist > 1) {
+        // Pad slaat één of meer kolommen over: boog het pad omhoog (of
+        // omlaag als er boven geen ruimte is) zodat het NIET dwars door
+        // de tussenliggende kaarten heen loopt, en zet het label op de
+        // top van de boog — daar staat nooit een kaart.
+        const bowUp = Math.min(y1, y2) > padding + cellH * 0.6;
+        const bow = 54 + 16 * (layerDist - 1);
+        const bowY = bowUp ? Math.min(y1, y2) - bow : Math.max(y1, y2) + bow;
+        path = `M ${x1} ${y1} C ${x1 + 50} ${bowY}, ${x2 - 50} ${bowY}, ${x2 - 2} ${y2}`;
+        labelX = midX;
+        labelY = bowY + (bowUp ? 4 : -4);
+      } else if (y1 === y2) {
+        path = `M ${x1} ${y1} L ${x2 - 2} ${y2}`;
+        labelX = midX;
+        labelY = y1 - 16;
+      } else {
+        // Rijbaan-wissel binnen één kolomsprong: vloeiende S-curve, label
+        // dichter bij de bestemming (t=0.6) zodat vertakkingen vanuit
+        // dezelfde gateway — die allemaal bij hetzelfde punt vertrekken —
+        // al voldoende verticaal uit elkaar liggen om niet te overlappen.
+        path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 - 2} ${y2}`;
+        const t = 0.6;
+        labelX = x1 + (x2 - x1) * t;
+        labelY = y1 + (y2 - y1) * t + (y2 > y1 ? 13 : -13);
+      }
+
+      arrows += `<path d="${path}" fill="none" stroke="#8CA0BC" stroke-width="2" marker-end="url(#proc-arrowhead)"/>`;
       if (label) {
         const st = arrowLabelStyle(label);
-        // Label een stukje langs het EIGEN pad plaatsen (niet vlak bij
-        // het vertrekpunt): bij meerdere vertakkingen vanuit dezelfde
-        // gateway loopt elk pad naar een andere y2 (andere lane/subrij),
-        // dus dit voorkomt dat labels van verschillende vertakkingen
-        // over elkaar heen vallen.
-        const t = 0.32;
-        const labelX = x1 + (x2 - x1) * t;
-        const labelY = y1 === y2 ? y1 - 15 : y1 + (y2 - y1) * t + (y2 > y1 ? 11 : -11);
-        const w = Math.max(38, label.length * 7 + 18);
-        arrows += `<rect x="${labelX - w / 2}" y="${labelY - 12}" width="${w}" height="24" rx="12" fill="${st.bg}" stroke="${st.border}" stroke-width="1.2"/>`;
-        arrows += `<text x="${labelX}" y="${labelY + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${st.text}">${escHtml(label)}</text>`;
+        const lines = wrapLabel(label);
+        const w = Math.max(40, Math.max(...lines.map(l => l.length)) * 7 + 20);
+        const h = lines.length > 1 ? 38 : 25;
+        arrowLabels += `<rect x="${labelX - w / 2}" y="${labelY - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="${st.bg}" stroke="${st.border}" stroke-width="1.2"/>`;
+        lines.forEach((line, i) => {
+          const ly = lines.length > 1 ? labelY - 6 + i * 13 : labelY + 4;
+          arrowLabels += `<text x="${labelX}" y="${ly}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${st.text}">${escHtml(line)}</text>`;
+        });
       }
     });
   }
@@ -1123,14 +1173,18 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   // (huisstijl), vormen sinds de swimlane-overstap wél echte BPMN-
   // notatie: cirkel (event), ruit (gateway), kaart (activiteit),
   // gestippelde kaart (subproces-verwijzing).
+  // 'accent' kleurt vormen/randen; 'text' is een net iets donkerdere
+  // variant, alleen gebruikt voor kleine tekst (labels, stapnummer) op
+  // een lichte ondergrond — zodat die ook bij 9-10px nog voldoende
+  // contrast houdt (WCAG AA, ≥4.5:1 op wit).
   const STEP_TYPE_STYLE = {
-    start:      { accent: '#1D9E75', tint: '#E1F5EE' },
-    proces:     { accent: '#005496', tint: '#E6F1FB', label: 'Processtap' },
-    beslissing: { accent: '#F26722', tint: '#FFF0E6' },
-    parallel:   { accent: '#F26722', tint: '#FFF0E6' },
-    actie:      { accent: '#7F77DD', tint: '#EDE9FC', label: 'Actie / taak' },
-    subproces:  { accent: '#4A6180', tint: '#F2F5F9' },
-    einde:      { accent: '#0B6E49', tint: '#E1F5EE' },
+    start:      { accent: '#1D9E75', tint: '#E1F5EE', text: '#0B6E49' },
+    proces:     { accent: '#005496', tint: '#E6F1FB', text: '#004178', label: 'Processtap' },
+    beslissing: { accent: '#F26722', tint: '#FFF0E6', text: '#B1490F' },
+    parallel:   { accent: '#F26722', tint: '#FFF0E6', text: '#B1490F' },
+    actie:      { accent: '#7F77DD', tint: '#EDE9FC', text: '#4C3FC9', label: 'Actie / taak' },
+    subproces:  { accent: '#4A6180', tint: '#F2F5F9', text: '#334A63' },
+    einde:      { accent: '#0B6E49', tint: '#E1F5EE', text: '#0B6E49' },
   };
 
   let boxes = '';
@@ -1182,13 +1236,13 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
       const x = p.cx - boxW / 2, y = p.cy - cardH / 2;
       const sel = isSelected ? `<rect x="${x - 5}" y="${y - 5}" width="${boxW + 10}" height="${cardH + 10}" rx="14" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
       const nameLinesHtml = nameLines.map((line, i) =>
-        `<text x="${p.cx}" y="${p.cy - (nameLines.length - 1) * lineHeight / 2 + i * lineHeight + 5}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${style.accent}">${escHtml(line)}</text>`
+        `<text x="${p.cx}" y="${p.cy - (nameLines.length - 1) * lineHeight / 2 + i * lineHeight + 5}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${style.text}">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}"${gotoAttr}>
         ${sel}
         <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="10" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.6" stroke-dasharray="5 4"/>
-        <text x="${p.cx}" y="${y + 18}" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="1" fill="${style.accent}">VERVOLGPROCES →</text>
+        <text x="${p.cx}" y="${y + 18}" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="1" fill="${style.text}">VERVOLGPROCES →</text>
         ${nameLinesHtml}
       </g>`;
     } else {
@@ -1204,9 +1258,9 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         ${sel}
         <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="12" fill="#FFFFFF" stroke="${isSelected ? '#005496' : '#DDE3EC'}" stroke-width="${isSelected ? 2 : 1.3}" filter="url(#proc-shadow)"/>
         <path d="M ${x + 12} ${y} H ${x + boxW - 12} A 12 12 0 0 1 ${x + boxW} ${y + 12} V ${y + 4.5} H ${x} V ${y + 12} A 12 12 0 0 1 ${x + 12} ${y} Z" fill="${style.accent}"/>
-        <text x="${x + 16}" y="${y + 26}" font-size="9" font-weight="700" letter-spacing="1" fill="${style.accent}">${escHtml(label.toUpperCase())}</text>
+        <text x="${x + 16}" y="${y + 26}" font-size="9" font-weight="700" letter-spacing="1" fill="${style.text}">${escHtml(label.toUpperCase())}</text>
         <circle cx="${x + boxW - 22}" cy="${y + 24}" r="11" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.2"/>
-        <text x="${x + boxW - 22}" y="${y + 28}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${style.accent}">${escHtml(String(s.stapNr))}</text>
+        <text x="${x + boxW - 22}" y="${y + 28}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${style.text}">${escHtml(String(s.stapNr))}</text>
         ${nameLinesHtml}
       </g>`;
     }
@@ -1224,6 +1278,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
     ${laneBg}
     ${arrows}
     ${boxes}
+    ${arrowLabels}
   </svg>`;
 }
 
@@ -1481,7 +1536,10 @@ function applyProcZoom() {
   const scroller = document.getElementById('flowScroll');
   if (!svg || !scroller) return;
   const nw = parseFloat(svg.dataset.nw);
-  const scale = procZoom === 'fit' ? Math.min(1, (scroller.clientWidth - 20) / nw) : procZoom;
+  // 'Passend' mag ook licht opschalen (max 118%) als het diagram smaller
+  // is dan het paneel — zo blijft het canvas niet nodeloos klein/leeg
+  // wanneer een proces weinig stappen/rijbanen heeft.
+  const scale = procZoom === 'fit' ? Math.min(1.18, (scroller.clientWidth - 20) / nw) : procZoom;
   svg.style.width = Math.round(nw * scale) + 'px';
   const label = document.getElementById('flowZoomLabel');
   if (label) label.textContent = Math.round(scale * 100) + '%';
