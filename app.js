@@ -1121,75 +1121,211 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
     return l2 ? [l1, l2] : [l1];
   }
 
-  // Pijllijnen en labels apart bijhouden: labels worden helemaal aan het
-  // eind (ná de kaarten/vormen) getekend, zodat een label-chipje nooit
-  // onder een kaart of een andere pijl kan wegvallen — SVG tekent later
-  // opgegeven elementen bovenop eerdere.
-  let arrows = '';
-  let arrowLabels = '';
+  // Halve hoogte per vorm — bepaalt waar een verticale (boven/onder)
+  // aansluiting de vorm raakt. Terugkoppel-/luslijnen verlaten en
+  // betreden een vakje altijd via boven/onder/rechts i.p.v. via de
+  // linkerzijde, zodat een lus nooit met de gewone voortgangsrichting
+  // (die altijd via links/rechts loopt) kan worden verward.
+  function halfH(stapType) {
+    if (stapType === 'start' || stapType === 'einde') return 26;
+    if (stapType === 'beslissing' || stapType === 'parallel') return 32;
+    return cardH / 2; // 40 — proces, actie, subproces (grootste vorm)
+  }
+  const SHAPE_MAXHALF = cardH / 2; // grootste mogelijke halve hoogte, voor veilige marges
+
+  // Rechthoek van een stap — gebruikt om te controleren dat een
+  // terugkoppellijn nooit dwars door een ander vakje heen loopt.
+  function stepRect(stp) {
+    const p = pos.get(stp.stapNr);
+    if (!p) return null;
+    return {
+      x1: p.cx - halfW(stp.stapType), x2: p.cx + halfW(stp.stapType),
+      y1: p.cy - halfH(stp.stapType), y2: p.cy + halfH(stp.stapType),
+    };
+  }
+  const allRects = steps.map(st => ({ nr: st.stapNr, r: stepRect(st) })).filter(x => x.r);
+
+  // Rechterrand van een kolom (layer) — ongeacht de vorm van de stap
+  // zelf (die staat altijd gecentreerd in de kolom), zodat een kanaal
+  // consistent in het midden van een kolomtussenruimte kan liggen.
+  function colRightEdge(layerNr) { return padding + laneLabelW + layerNr * (boxW + colGap) + boxW; }
+  const chanUseByTargetLayer = new Map(); // spreidt kanalen die dezelfde doelkolom delen
+
+  // Elke verbinding wordt eerst als rechte, haakse puntenreeks (polylijn)
+  // opgebouwd — precies zoals in de officiële procesplaten: nooit
+  // diagonaal of gebogen. Pas ná deze stap (zie verderop) worden
+  // kruisingen tussen lijnen opgespoord en krijgt de terugkoppellijn op
+  // zo'n punt een duidelijke "sprong", zodat nooit onduidelijk is welke
+  // lijn doorloopt.
+  const edges = [];
   for (const s of steps) {
     const from = pos.get(s.stapNr);
     s.volgendeStap.forEach((nextNr, idx) => {
       const to = pos.get(nextNr);
       if (!from || !to) return;
       const label = (s.volgendeLabel && s.volgendeLabel[idx]) || '';
-      const x1 = from.cx + halfW(s.stapType), y1 = from.cy;
       const toStep = steps.find(x => x.stapNr === nextNr);
-      const x2 = to.cx - halfW(toStep ? toStep.stapType : ''), y2 = to.cy;
-      const layerDist = Math.abs(layerMap.get(nextNr) - layerMap.get(s.stapNr));
-      const midX = (x1 + x2) / 2;
+      const toType = toStep ? toStep.stapType : '';
+      const fromLayer = layerMap.get(s.stapNr), toLayer = layerMap.get(nextNr);
+      const backward = toLayer <= fromLayer;
 
-      let path, labelX, labelY;
-      if (layerDist > 1) {
-        // Pad slaat één of meer kolommen over: boog het pad omhoog (of
-        // omlaag als er boven geen ruimte is) zodat het NIET dwars door
-        // de tussenliggende kaarten heen loopt, en zet het label op de
-        // top van de boog — daar staat nooit een kaart.
-        const bowUp = Math.min(y1, y2) > padding + cellH * 0.6;
-        const bow = 54 + 16 * (layerDist - 1);
-        const bowY = bowUp ? Math.min(y1, y2) - bow : Math.max(y1, y2) + bow;
-        path = `M ${x1} ${y1} C ${x1 + 50} ${bowY}, ${x2 - 50} ${bowY}, ${x2 - 2} ${y2}`;
-        labelX = midX;
-        // Het label hoort op het werkelijke midden van de kromme (t=0.5),
-        // niet op bowY zelf: als bron en doel ver uit elkaar liggen in
-        // hoogte (bv. een boog die twee rijbanen overslaat) ligt de curve
-        // bij x=midX helemaal niet op bowY maar veel dichter bij het
-        // gemiddelde van y1 en y2 — anders zweeft het labelchipje los van
-        // de lijn. Cubic bezier op t=0.5: (y1 + 6*bowY + y2) / 8.
-        const bowMidY = (y1 + 6 * bowY + y2) / 8;
-        labelY = bowMidY + (bowUp ? 4 : -4);
-      } else if (y1 === y2) {
-        path = `M ${x1} ${y1} L ${x2 - 2} ${y2}`;
-        labelX = midX;
-        labelY = y1 - 16;
+      let pts, labelX, labelY;
+
+      if (!backward) {
+        // ── Vooruit: de normale procesgang, altijd van links naar rechts ──
+        const x1 = from.cx + halfW(s.stapType), y1 = from.cy;
+        const x2 = to.cx - halfW(toType), y2 = to.cy;
+        const layerDist = toLayer - fromLayer;
+        const midX = (x1 + x2) / 2;
+
+        if (layerDist > 1) {
+          // Slaat een of meer kolommen over: via een recht "plateau"
+          // boven (of onder, als er boven geen ruimte is) de
+          // tussenliggende vakjes — i.p.v. er dwars doorheen, en zonder
+          // boog: enkel rechte stukken, net als de officiële platen.
+          const bowUp = Math.min(y1, y2) > padding + cellH * 0.6;
+          const bow = 54 + 16 * (layerDist - 1);
+          const shelfY = bowUp ? Math.min(y1, y2) - bow : Math.max(y1, y2) + bow;
+          pts = [{ x: x1, y: y1 }, { x: x1 + 22, y: y1 }, { x: x1 + 22, y: shelfY },
+                 { x: x2 - 22, y: shelfY }, { x: x2 - 22, y: y2 }, { x: x2 - 2, y: y2 }];
+          labelX = midX; labelY = shelfY + (bowUp ? -10 : 18);
+        } else if (y1 === y2) {
+          // Zelfde rijbaan, volgende kolom: kaarsrechte lijn.
+          pts = [{ x: x1, y: y1 }, { x: x2 - 2, y: y2 }];
+          labelX = midX; labelY = y1 - 16;
+        } else {
+          // Volgende kolom, andere rijbaan: haakse "elleboog" via het
+          // midden van de kolomtussenruimte — geen curve meer.
+          pts = [{ x: x1, y: y1 }, { x: midX, y: y1 }, { x: midX, y: y2 }, { x: x2 - 2, y: y2 }];
+          labelX = midX; labelY = (y2 > y1 ? y2 - 22 : y2 + 22);
+        }
       } else {
-        // Rijbaan-wissel binnen één kolomsprong: vloeiende S-curve, label
-        // dicht bij de bestemming (t=0.78) zodat vertakkingen vanuit
-        // dezelfde gateway — die allemaal bij hetzelfde punt vertrekken —
-        // al voldoende verticaal uit elkaar liggen om niet te overlappen, én
-        // zodat een label voor een ver/laag doel niet binnen de verticale
-        // ruimte van een dichterbij/hoger gelegen kaart terechtkomt die de
-        // boog toevallig onderweg passeert.
-        path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2 - 2} ${y2}`;
-        const t = 0.78;
-        labelX = x1 + (x2 - x1) * t;
-        labelY = y1 + (y2 - y1) * t + (y2 > y1 ? 13 : -13);
+        // ── Terugkoppeling ("terug naar…", lus) — eigen kanaal ──────────
+        // Verlaat de stap altijd via boven/onder (nooit via de zijkant,
+        // die is voor de voortgangsrichting) en komt terug binnen via de
+        // rechterrand van het doel, via een verticaal kanaal net na de
+        // doelkolom — zo kan een terugkoppellijn nooit dwars door een
+        // vakje lopen, en blijft ze meteen herkenbaar als lus.
+        const fromType = s.stapType;
+        const sameCol = fromLayer === toLayer;
+        const blockerBetween = sameCol && allRects.some(({ nr, r }) =>
+          nr !== s.stapNr && nr !== nextNr && r.x1 < from.cx + 6 && r.x2 > from.cx - 6 &&
+          r.y1 < Math.max(from.cy, to.cy) && r.y2 > Math.min(from.cy, to.cy));
+
+        if (sameCol && !blockerBetween) {
+          // Eenvoudigste geval: zelfde kolom, niets ertussen — kaarsrechte
+          // verticale lijn (bijv. "opnieuw controleren" rechtstreeks naar
+          // het vakje erboven).
+          const down = to.cy > from.cy;
+          const y1 = from.cy + (down ? halfH(fromType) : -halfH(fromType));
+          const y2 = to.cy + (down ? -halfH(toType) - 2 : halfH(toType) + 2);
+          pts = [{ x: from.cx, y: y1 }, { x: to.cx, y: y2 }];
+          labelX = from.cx + 40; labelY = (y1 + y2) / 2;
+        } else {
+          const exitTop = to.cy <= from.cy;
+          const boundaryY = exitTop ? from.cy - halfH(fromType) : from.cy + halfH(fromType);
+          // Reisviveau ligt altijd voorbij de grootst mógelijke vormhoogte
+          // in deze rijbaan (niet alleen die van deze stap) plus marge —
+          // zo schampt de lijn nooit een ander vakje in dezelfde rij.
+          const travelY = exitTop ? from.cy - SHAPE_MAXHALF - 16 : from.cy + SHAPE_MAXHALF + 16;
+          let chX = colRightEdge(toLayer) + colGap / 2;
+          const used = chanUseByTargetLayer.get(toLayer) || 0;
+          chX += used * 13;
+          chanUseByTargetLayer.set(toLayer, used + 1);
+          const enterX = to.cx + halfW(toType) + 2;
+          pts = [
+            { x: from.cx, y: boundaryY }, { x: from.cx, y: travelY },
+            { x: chX, y: travelY }, { x: chX, y: to.cy }, { x: enterX, y: to.cy },
+          ];
+          labelX = (from.cx + chX) / 2; labelY = travelY + (exitTop ? -10 : 18);
+        }
       }
 
-      arrows += `<path d="${path}" fill="none" stroke="#8CA0BC" stroke-width="2" marker-end="url(#proc-arrowhead)"/>`;
-      if (label) {
-        const st = arrowLabelStyle(label);
-        const lines = wrapLabel(label);
-        const w = Math.max(40, Math.max(...lines.map(l => l.length)) * 7 + 20);
-        const h = lines.length > 1 ? 38 : 25;
-        arrowLabels += `<rect x="${labelX - w / 2}" y="${labelY - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="${st.bg}" stroke="${st.border}" stroke-width="1.2"/>`;
-        lines.forEach((line, i) => {
-          const ly = lines.length > 1 ? labelY - 6 + i * 13 : labelY + 4;
-          arrowLabels += `<text x="${labelX}" y="${ly}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${st.text}">${escHtml(line)}</text>`;
-        });
-      }
+      edges.push({ backward, pts, label, labelX, labelY });
     });
   }
+
+  // ── Kruisingen: waar een terugkoppellijn een andere lijn kruist krijgt
+  // ze een duidelijke "sprong" (halve cirkel, zoals bij bedradings-
+  // schema's) — zo is nooit onduidelijk welke lijn doorloopt. Rechte
+  // lijnen kruisen elkaar het liefst zo min mogelijk (vandaar de eigen
+  // kanalen hierboven); waar het toch gebeurt, is het altijd zichtbaar.
+  const segsOf = ptsArr => { const out = []; for (let i = 0; i < ptsArr.length - 1; i++) out.push({ i, a: ptsArr[i], b: ptsArr[i + 1] }); return out; };
+  edges.forEach((edge, ei) => {
+    if (!edge.backward) return;
+    const jumps = [];
+    const mySegs = segsOf(edge.pts);
+    edges.forEach((other, oi) => {
+      if (oi === ei) return;
+      if (other.backward && oi < ei) return; // eerder-getekende lus loopt door, latere springt
+      const otherSegs = segsOf(other.pts);
+      mySegs.forEach(seg => {
+        const segHoriz = seg.a.y === seg.b.y;
+        otherSegs.forEach(oseg => {
+          const osegHoriz = oseg.a.y === oseg.b.y;
+          if (segHoriz === osegHoriz) return; // enkel haakse (H×V) kruisingen tellen
+          const h = segHoriz ? seg : oseg, v = segHoriz ? oseg : seg;
+          const hx1 = Math.min(h.a.x, h.b.x), hx2 = Math.max(h.a.x, h.b.x);
+          const vy1 = Math.min(v.a.y, v.b.y), vy2 = Math.max(v.a.y, v.b.y);
+          const ix = v.a.x, iy = h.a.y;
+          if (ix > hx1 + 3 && ix < hx2 - 3 && iy > vy1 + 3 && iy < vy2 - 3) jumps.push({ segIdx: seg.i, x: ix, y: iy });
+        });
+      });
+    });
+    edge.jumps = jumps;
+  });
+
+  // Zet een polylijn (met eventuele sprongpunten) om in een SVG-pad.
+  function polylineToPath(ptsArr, jumps) {
+    let d = `M ${ptsArr[0].x} ${ptsArr[0].y}`;
+    for (let i = 0; i < ptsArr.length - 1; i++) {
+      const p1 = ptsArr[i], p2 = ptsArr[i + 1];
+      const horiz = p1.y === p2.y;
+      const dirSign = horiz ? Math.sign(p2.x - p1.x) : Math.sign(p2.y - p1.y);
+      const segJumps = (jumps || []).filter(j => j.segIdx === i);
+      if (!segJumps.length || dirSign === 0) { d += ` L ${p2.x} ${p2.y}`; continue; }
+      segJumps.sort((a, b) => horiz ? (a.x - b.x) * dirSign : (a.y - b.y) * dirSign);
+      const r = 7;
+      let cur = p1;
+      for (const j of segJumps) {
+        if (horiz) {
+          const bx1 = j.x - r * dirSign, bx2 = j.x + r * dirSign;
+          d += ` L ${bx1} ${cur.y} A ${r} ${r} 0 0 ${dirSign > 0 ? 1 : 0} ${bx2} ${cur.y}`;
+          cur = { x: bx2, y: cur.y };
+        } else {
+          const by1 = j.y - r * dirSign, by2 = j.y + r * dirSign;
+          d += ` L ${cur.x} ${by1} A ${r} ${r} 0 0 ${dirSign > 0 ? 1 : 0} ${cur.x} ${by2}`;
+          cur = { x: cur.x, y: by2 };
+        }
+      }
+      d += ` L ${p2.x} ${p2.y}`;
+    }
+    return d;
+  }
+
+  // Pijllijnen en labels apart bijhouden: labels worden helemaal aan het
+  // eind (ná de kaarten/vormen) getekend, zodat een label-chipje nooit
+  // onder een kaart of een andere pijl kan wegvallen — SVG tekent later
+  // opgegeven elementen bovenop eerdere.
+  let arrows = '';
+  let arrowLabels = '';
+  edges.forEach(edge => {
+    const d = polylineToPath(edge.pts, edge.jumps);
+    const stroke = edge.backward ? '#C77A3A' : '#8CA0BC';
+    const marker = edge.backward ? 'proc-arrowhead-terug' : 'proc-arrowhead';
+    arrows += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="2" marker-end="url(#${marker})"/>`;
+    if (edge.label) {
+      const st = arrowLabelStyle(edge.label);
+      const lines = wrapLabel(edge.label);
+      const w = Math.max(40, Math.max(...lines.map(l => l.length)) * 7 + 20);
+      const h = lines.length > 1 ? 38 : 25;
+      arrowLabels += `<rect x="${edge.labelX - w / 2}" y="${edge.labelY - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="${st.bg}" stroke="${st.border}" stroke-width="1.2"/>`;
+      lines.forEach((line, i) => {
+        const ly = lines.length > 1 ? edge.labelY - 6 + i * 13 : edge.labelY + 4;
+        arrowLabels += `<text x="${edge.labelX}" y="${ly}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${st.text}">${escHtml(line)}</text>`;
+      });
+    }
+  });
 
   // Lane-banen: afwisselend lichte achtergrond + rolnaam verticaal
   // links, zoals in de officiële procesplaten (swimlanes per BPMN-
@@ -1304,6 +1440,9 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
       <marker id="proc-arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
         <path d="M0,0 L9,4.5 L0,9 Z" fill="#A7B8CE"/>
       </marker>
+      <marker id="proc-arrowhead-terug" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 Z" fill="#C77A3A"/>
+      </marker>
       <filter id="proc-shadow" x="-20%" y="-20%" width="140%" height="150%">
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#002E56" flood-opacity="0.12"/>
       </filter>
@@ -1321,7 +1460,8 @@ const NORMAAL_LEGEND = `
   <span><i style="background:#7F77DD;"></i>Actie / taak</span>
   <span><i style="background:#F26722;transform:rotate(45deg);"></i>Gateway (beslissing)</span>
   <span><i style="background:#4A6180;border:1px dashed #4A6180;background:transparent;"></i>Vervolgproces</span>
-  <span><i style="background:#0B6E49;border-radius:50%;"></i>Einde (event)</span>`;
+  <span><i style="background:#0B6E49;border-radius:50%;"></i>Einde (event)</span>
+  <span><i style="background:#C77A3A;border-radius:1px;width:14px;height:2px;"></i>Terugkoppeling (lus)</span>`;
 
 /* Kleuren per fase-categorie (MensCentraal) — zelfde huisstijlpalet
    als de rest van de app. 'header' is de donkere fase-balk (witte
