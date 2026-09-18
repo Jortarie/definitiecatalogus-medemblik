@@ -1032,14 +1032,28 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   const svgWidth = padding * 2 + laneLabelW + (maxLayer + 1) * boxW + maxLayer * colGap;
 
   // Y-positie van elke lane-baan (gestapeld, hoogte = aantal sub-rijen × cellH).
+  // Geschatte breedte van de geroteerde (verticale) rijbaan-labeltekst
+  // (font-size 10.5, bold, uppercase, letter-spacing 0.4) — een lange
+  // rolnaam (bijv. "Mdw. of Coördinator Financiën Sociaal Domein") mag
+  // niet hoger uitvallen dan de rijbaan zelf, anders prikt de tekst in
+  // de rijbaan erboven/eronder als die maar één rij stappen bevat.
+  const laneLabelMinHeight = label => Math.ceil((label || '').toUpperCase().length * 7.6) + 24;
+
   const laneTop = new Map();
   const laneHeight = new Map();
+  // Als een label de rijbaan hoger maakt dan de stappen zelf nodig
+  // hebben (bijv. één stap in een rijbaan met een lange rolnaam), komt
+  // die extra ruimte als gelijke marge boven én onder de stappen —
+  // anders zouden ze bovenaan een te hoge band blijven "plakken".
+  const laneContentOffset = new Map();
   {
     let cursorY = padding;
     lanes.forEach((lane, laneIdx) => {
-      const h = cellCountByLane.get(laneIdx) * cellH;
+      const naturalH = cellCountByLane.get(laneIdx) * cellH;
+      const h = Math.max(naturalH, laneLabelMinHeight(lane.label));
       laneTop.set(laneIdx, cursorY);
       laneHeight.set(laneIdx, h);
+      laneContentOffset.set(laneIdx, (h - naturalH) / 2);
       cursorY += h;
     });
     var svgHeight = cursorY + padding * 0.5;
@@ -1057,7 +1071,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
     const laneIdx = laneIdxByStep.get(s.stapNr);
     const subrow = subrowByStep.get(s.stapNr) || 0;
     const cx = padding + laneLabelW + layerNr * (boxW + colGap) + boxW / 2;
-    const cy = laneTop.get(laneIdx) + subrow * cellH + cellH / 2;
+    const cy = laneTop.get(laneIdx) + laneContentOffset.get(laneIdx) + subrow * cellH + cellH / 2;
     pos.set(s.stapNr, { cx, cy, laneIdx });
   }
 
