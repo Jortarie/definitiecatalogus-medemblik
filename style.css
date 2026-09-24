@@ -733,7 +733,7 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
   }
 
   /* ── Home / startpagina ───────────────────────────────────────── */
-  .home-content{max-width:1000px;margin:0 auto;width:100%;gap:34px;}
+  .home-content{max-width:1000px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:34px;}
   .home-hero{display:flex;flex-direction:column;gap:16px;}
   .home-title{font-size:1.55rem;font-weight:800;color:#fff;line-height:1.25;}
   .home-sub{font-size:.85rem;line-height:1.65;color:rgba(255,255,255,.72);max-width:660px;}
