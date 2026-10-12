@@ -19,48 +19,35 @@
     }
   })();
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/definitiecatalogus-medemblik/style.css">
 </head>
-<body>
+<body data-tab="home">
 
-<div class="hdr hdr-merged">
-  <div class="hdr-l">
-    <img src="https://www.medemblik.nl/fileadmin/user_upload/medemblik-logo.svg" style="height:40px;filter:brightness(0) invert(1)" onerror="this.style.display='none'">
-    <div class="hdr-sep"></div>
-    <div class="t1" style="font-size:1.2rem;font-weight:700;letter-spacing:-.01em;">Datacatalogus</div>
+<header class="omslag">
+  <svg class="lijncirkel" viewBox="0 0 200 200" aria-hidden="true"><defs><clipPath id="lc"><circle cx="100" cy="100" r="100"/></clipPath><mask id="lm"><rect width="200" height="200" fill="#fff"/><circle cx="100" cy="100" r="52" fill="#000"/></mask></defs><g clip-path="url(#lc)" mask="url(#lm)" stroke="#008D4D" stroke-width="6"><line x1="-210" y1="210" x2="0" y2="0"/><line x1="-194" y1="210" x2="16" y2="0"/><line x1="-178" y1="210" x2="32" y2="0"/><line x1="-162" y1="210" x2="48" y2="0"/><line x1="-146" y1="210" x2="64" y2="0"/><line x1="-130" y1="210" x2="80" y2="0"/><line x1="-114" y1="210" x2="96" y2="0"/><line x1="-98" y1="210" x2="112" y2="0"/><line x1="-82" y1="210" x2="128" y2="0"/><line x1="-66" y1="210" x2="144" y2="0"/><line x1="-50" y1="210" x2="160" y2="0"/><line x1="-34" y1="210" x2="176" y2="0"/><line x1="-18" y1="210" x2="192" y2="0"/><line x1="-2" y1="210" x2="208" y2="0"/><line x1="14" y1="210" x2="224" y2="0"/><line x1="30" y1="210" x2="240" y2="0"/><line x1="46" y1="210" x2="256" y2="0"/><line x1="62" y1="210" x2="272" y2="0"/><line x1="78" y1="210" x2="288" y2="0"/><line x1="94" y1="210" x2="304" y2="0"/><line x1="110" y1="210" x2="320" y2="0"/><line x1="126" y1="210" x2="336" y2="0"/><line x1="142" y1="210" x2="352" y2="0"/><line x1="158" y1="210" x2="368" y2="0"/><line x1="174" y1="210" x2="384" y2="0"/><line x1="190" y1="210" x2="400" y2="0"/><line x1="206" y1="210" x2="416" y2="0"/></g></svg>
+  <div class="omslag-wrap">
+    <div class="omslag-top">
+      <img class="omslag-logo" src="data:image/png;base64,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" alt="Logo gemeente Medemblik">
+      <span class="omslag-naam">Definitiecatalogus sociaal domein</span>
+      <button class="hdr-refresh" id="btnRefreshSheets" onclick="loadAllData()" title="Haal de actuele data opnieuw op uit het Google Sheet">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
+        Vernieuw data
+      </button>
+    </div>
+    <div class="omslag-tekst">
+      <h1>Definitiecatalogus sociaal domein</h1>
+      <p>Begrippen, processen, datavelden en dashboards · bron: Google Sheets · live bijgewerkt</p>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Onderdelen">
+      <button type="button" role="tab" class="hdr-nav-btn active" id="navHome" onclick="switchMainTab('home')">Home</button>
+      <button type="button" role="tab" class="hdr-nav-btn" id="navDefinities" onclick="switchMainTab('definities')">Definities</button>
+      <button type="button" role="tab" class="hdr-nav-btn" id="navProcessen" onclick="switchMainTab('processen')">Processen</button>
+      <button type="button" role="tab" class="hdr-nav-btn" id="navDatavelden" onclick="switchMainTab('datavelden')">Datavelden</button>
+      <button type="button" role="tab" class="hdr-nav-btn" id="navDashboards" onclick="switchMainTab('dashboards')">Dashboards</button>
+    </nav>
   </div>
-
-  <div class="hdr-nav">
-    <button class="hdr-nav-btn active" id="navHome" onclick="switchMainTab('home')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9"></path></svg>
-      Home
-    </button>
-    <button class="hdr-nav-btn" id="navDefinities" onclick="switchMainTab('definities')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h6a3 3 0 0 1 3 3V19a3 3 0 0 0-3-2.5H2z"></path><path d="M22 4.5h-6a3 3 0 0 0-3 3V19a3 3 0 0 1 3-2.5h6z"></path><circle cx="18" cy="17.5" r="4"></circle><line x1="18" y1="17" x2="18" y2="19.4"></line><circle cx="18" cy="15.1" r="0.4" fill="currentColor"></circle></svg>
-      Definities
-    </button>
-    <button class="hdr-nav-btn" id="navProcessen" onclick="switchMainTab('processen')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="2.3"></circle><path d="M6.5 2.4v1.7M6.5 9.4v1.7M2.4 6.5h1.7M9.4 6.5h1.7M3.6 3.6l1.2 1.2M8.2 8.2l1.2 1.2M9.4 3.6L8.2 4.8M4.8 8.2L3.6 9.4"></path><path d="M11.5 6.5H16a3.5 3.5 0 0 1 0 7H9a3.5 3.5 0 0 0-3.5 3.5"></path><circle cx="17.5" cy="17.5" r="3.7"></circle><path d="M15.9 17.6l1.2 1.2 2.1-2.4"></path></svg>
-      Processen
-    </button>
-    <button class="hdr-nav-btn" id="navDatavelden" onclick="switchMainTab('datavelden')">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-      Datavelden
-    </button>
-    <button class="hdr-nav-btn" id="navDashboards" onclick="switchMainTab('dashboards')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="13.5" rx="2"></rect><path d="M12 17v3.5M8 20.5h8"></path><path d="M6.5 13.5v-3M10 13.5V7.5M13.5 13.5V10M17 13.5V6.5"></path></svg>
-      Dashboards
-    </button>
-  </div>
-
-  <div style="display:flex;align-items:center;gap:10px;">
-    <button class="hdr-refresh" id="btnRefreshSheets" onclick="loadAllData()" title="Haal de actuele data opnieuw op uit het Google Sheet">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
-      Vernieuw data
-    </button>
-  </div>
-</div>
+</header>
 
 <div id="dataIssueBanner"></div>
 
@@ -225,55 +212,10 @@
 
 <!-- ============== HOME (startpagina) ============== -->
 <div id="view-home" class="proc-view active">
-  <svg class="kringen-bg" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-    <rect width="1400" height="900" fill="#002E56"/>
-    <g opacity="0.5">
-      <circle cx="1200" cy="780" r="40" fill="none" stroke="#16BECF" stroke-width="1.8"/>
-      <circle cx="1200" cy="780" r="80" fill="none" stroke="#16BECF" stroke-width="1.4" opacity="0.75"/>
-      <circle cx="1200" cy="780" r="120" fill="none" stroke="#16BECF" stroke-width="1.1" opacity="0.55"/>
-      <circle cx="1200" cy="780" r="160" fill="none" stroke="#16BECF" stroke-width="0.9" opacity="0.38"/>
-      <circle cx="1200" cy="780" r="200" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.22"/>
-      <clipPath id="cl1-home"><circle cx="1200" cy="780" r="128"/></clipPath>
-      <g clip-path="url(#cl1-home)" opacity="0.2" stroke="#16BECF" stroke-width="0.9">
-        <line x1="1050" y1="620" x2="1210" y2="940"/>
-        <line x1="1080" y1="620" x2="1240" y2="940"/>
-        <line x1="1110" y1="620" x2="1270" y2="940"/>
-        <line x1="1140" y1="620" x2="1300" y2="940"/>
-        <line x1="1170" y1="620" x2="1330" y2="940"/>
-      </g>
-    </g>
-    <g opacity="0.45">
-      <circle cx="120" cy="100" r="50" fill="none" stroke="#8DC63F" stroke-width="1.8"/>
-      <circle cx="120" cy="100" r="95" fill="none" stroke="#8DC63F" stroke-width="1.4" opacity="0.75"/>
-      <circle cx="120" cy="100" r="140" fill="none" stroke="#8DC63F" stroke-width="1.1" opacity="0.55"/>
-      <circle cx="120" cy="100" r="185" fill="none" stroke="#8DC63F" stroke-width="0.9" opacity="0.35"/>
-      <circle cx="120" cy="100" r="230" fill="none" stroke="#8DC63F" stroke-width="0.7" opacity="0.2"/>
-      <clipPath id="cl2-home"><circle cx="120" cy="100" r="148"/></clipPath>
-      <g clip-path="url(#cl2-home)" opacity="0.18" stroke="#8DC63F" stroke-width="0.9">
-        <line x1="-50" y1="-60" x2="110" y2="260"/>
-        <line x1="-20" y1="-60" x2="140" y2="260"/>
-        <line x1="10"  y1="-60" x2="170" y2="260"/>
-        <line x1="40"  y1="-60" x2="200" y2="260"/>
-        <line x1="70"  y1="-60" x2="230" y2="260"/>
-      </g>
-    </g>
-    <g opacity="0.28">
-      <circle cx="1350" cy="200" r="28" fill="none" stroke="#8DC63F" stroke-width="1.4"/>
-      <circle cx="1350" cy="200" r="55" fill="none" stroke="#8DC63F" stroke-width="1.0" opacity="0.7"/>
-      <circle cx="1350" cy="200" r="82" fill="none" stroke="#8DC63F" stroke-width="0.8" opacity="0.45"/>
-    </g>
-    <g opacity="0.25">
-      <circle cx="80" cy="820" r="35" fill="none" stroke="#16BECF" stroke-width="1.3"/>
-      <circle cx="80" cy="820" r="65" fill="none" stroke="#16BECF" stroke-width="1.0" opacity="0.7"/>
-      <circle cx="80" cy="820" r="95" fill="none" stroke="#16BECF" stroke-width="0.7" opacity="0.45"/>
-    </g>
-  </svg>
-
-  <div class="proc-content home-content">
-    <div class="home-hero">
-      <div class="home-title">Definitiecatalogus Sociaal Domein</div>
-      <div class="home-sub">Eén centrale plek voor de betekenis van begrippen binnen het sociaal domein, de processen waarin ze gebruikt worden, de onderliggende datavelden en de dashboards die er al op gebouwd zijn.</div>
-
+    <div class="proc-content home-content">
+    <section class="home-sectie">
+      <h2 class="kop-accent">Waar ben je naar op zoek?</h2>
+      <p class="intro">Eén centrale plek voor de betekenis van begrippen binnen het sociaal domein, de processen waarin ze gebruikt worden, de onderliggende datavelden en de dashboards die er al op gebouwd zijn.</p>
       <div class="home-search-wrap">
         <div class="home-search-input-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -281,10 +223,12 @@
         </div>
         <div class="home-search-results" id="homeSearchResults"></div>
       </div>
-    </div>
+    </section>
 
+    <section class="home-sectie">
+      <h2>Bladeren per onderdeel</h2>
     <div class="home-tiles">
-      <div class="home-tile" data-home-tile="definities" style="--tile-c:#005496;">
+      <div class="home-tile" data-home-tile="definities">
         <div class="home-tile-num" id="homeCountDefinities">—</div>
         <div class="home-tile-body">
           <div class="home-tile-title">
@@ -297,7 +241,7 @@
         <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </div>
 
-      <div class="home-tile" data-home-tile="processen" style="--tile-c:#0C6E78;">
+      <div class="home-tile" data-home-tile="processen">
         <div class="home-tile-num" id="homeCountProcessen">—</div>
         <div class="home-tile-body">
           <div class="home-tile-title">
@@ -310,7 +254,7 @@
         <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </div>
 
-      <div class="home-tile" data-home-tile="datavelden" style="--tile-c:#3B6D11;">
+      <div class="home-tile" data-home-tile="datavelden">
         <div class="home-tile-num" id="homeCountDatavelden">—</div>
         <div class="home-tile-body">
           <div class="home-tile-title">
@@ -323,7 +267,7 @@
         <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </div>
 
-      <div class="home-tile" data-home-tile="dashboards" style="--tile-c:#005496;">
+      <div class="home-tile" data-home-tile="dashboards">
         <div class="home-tile-num" id="homeCountDashboards">—</div>
         <div class="home-tile-body">
           <div class="home-tile-title">
@@ -337,10 +281,14 @@
       </div>
     </div>
 
+    </section>
+
+    <section class="home-sectie">
     <div class="home-about">
       <div class="home-about-label">Over deze catalogus</div>
       <div class="home-about-text">De inhoud komt rechtstreeks uit Google Sheets en wordt bijgewerkt zodra het Sheet wijzigt — klik op "Vernieuw data" rechtsboven om de nieuwste stand op te halen. Gebruik de zoekbalk hierboven om direct naar een begrip, dataveld, proces of dashboard te springen, of klik op een tegel om te bladeren.</div>
     </div>
+    </section>
   </div>
 </div>
 
@@ -493,8 +441,8 @@
 </div>
 
 <div class="ftr">
-  <span>Gemeente Medemblik · www.medemblik.nl · Sociaal Domein</span>
-  <span><a href="https://jortarie.github.io/definitiecatalogus-medemblik/" target="_blank" style="color: rgba(255, 255, 255, 0.45); text-decoration: none; font-size: 0.6rem;" onmouseover="this.style.color='#7EEAF3'" onmouseout="this.style.color='rgba(255,255,255,.45)'">jortarie.github.io/definitiecatalogus-medemblik</a></span>
+  <span>gemeente Medemblik · www.medemblik.nl · sociaal domein</span>
+  <span><a href="https://jortarie.github.io/definitiecatalogus-medemblik/" target="_blank" style="text-decoration:none;">jortarie.github.io/definitiecatalogus-medemblik</a></span>
   <span id="ftrDate"></span>
 </div>
 

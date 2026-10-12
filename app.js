@@ -2009,6 +2009,8 @@ function tabFromLocation() {
    ==================================================================== */
 function switchMainTab(tab) {
   activeMainTab = tab;
+  // Omslag: groot op Home, compact op de werktabbladen (zie style.css)
+  document.body.dataset.tab = tab;
   const views = {
     home: 'view-home',
     definities: 'view-definities',

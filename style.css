@@ -858,3 +858,152 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
 .proc-view-flat .dv-search-wrap{background:var(--lg) !important;}
 .proc-view-flat .dv-fi-sel{background:var(--w) !important;}
 .proc-view-flat #procCountLabel{color:var(--sub) !important;}
+
+/* ===================================================================
+   RAPPORTAGE-HUISSTIJL (okt 2026) — zelfde opmaak als de vaste
+   Medemblik-rapportages: omslagband met verloop Saffier → Nacht, wit
+   logo, groene lijncirkel, tabbladen onderaan de omslag, witte pagina,
+   vlakke vormen (hoeken 0–3px, geen schaduwen), Lentegroen als enig
+   accent. Deze laag staat bewust onderaan en overschrijft de oudere
+   regels hierboven.
+   =================================================================== */
+:root{
+  --s:#005496;--n:#002E56;--lentegroen:#008D4D;--logogroen:#8DC63F;
+  --sub:#3D5A75;--muted:#5F7387;--lg:#F2F5F7;--bd:#D8DFE6;--markering:#E3ECF5;--tint:#9DBEDD;
+}
+body{background:#fff;}
+
+/* ── Omslag ── */
+.omslag{flex:0 0 auto;position:relative;overflow:hidden;color:#fff;background:linear-gradient(90deg,var(--s),var(--n));}
+.omslag-wrap{position:relative;z-index:1;padding:24px 28px 0;}
+.lijncirkel{position:absolute;right:-90px;top:-110px;width:380px;height:380px;pointer-events:none;}
+.omslag-top{display:flex;align-items:center;gap:16px;}
+.omslag-logo{height:52px;display:block;}
+.omslag-naam{display:none;font-size:15px;font-weight:700;padding-left:16px;border-left:1px solid rgba(255,255,255,.3);}
+.omslag .hdr-refresh{margin-left:auto;border-radius:3px;font-size:13px;font-weight:700;padding:7px 12px;}
+.omslag .hdr-refresh:focus-visible{outline:2px solid var(--logogroen);outline-offset:2px;}
+.omslag-tekst{margin-top:44px;}
+.omslag h1{font-size:40px;line-height:1.15;font-weight:700;margin:0 0 12px;max-width:20ch;}
+.omslag-tekst p{font-size:20px;line-height:1.4;font-weight:300;margin:0;max-width:52ch;}
+
+/* Tabbladen onderaan de omslag */
+.omslag .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-top:32px;}
+.omslag .tabs .hdr-nav-btn{font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:rgba(255,255,255,.12);border:0;border-radius:3px 3px 0 0;padding:10px 18px;cursor:pointer;transition:background .15s;}
+.omslag .tabs .hdr-nav-btn:hover:not(.active){background:rgba(255,255,255,.22);color:#fff;}
+.omslag .tabs .hdr-nav-btn.active{background:#fff;color:var(--n);}
+.omslag .tabs .hdr-nav-btn:focus-visible{outline:2px solid var(--logogroen);outline-offset:2px;}
+
+/* Op de werktabbladen een compacte omslag, zodat tabel en detail de
+   hoogte houden. Op Home staat de volle omslag met titel. */
+body:not([data-tab="home"]) .omslag-wrap{padding-top:14px;}
+body:not([data-tab="home"]) .omslag-logo{height:36px;}
+body:not([data-tab="home"]) .omslag-naam{display:block;}
+body:not([data-tab="home"]) .omslag-tekst{display:none;}
+body:not([data-tab="home"]) .omslag .tabs{margin-top:14px;}
+body:not([data-tab="home"]) .lijncirkel{width:260px;height:260px;top:-120px;right:-70px;}
+
+/* ── Filterbalken per tabblad ── */
+.toolbar,.dv-toolbar,.dash-toolbar,.proc-view-flat .proc-toolbar{background:#fff;border-bottom:1px solid var(--bd);height:52px;flex:0 0 52px;padding:0 28px;}
+#searchInput,#dvSearch,#dashSearch,#procSearch{border:1px solid var(--bd);border-radius:3px;background:#fff;font-size:13px;padding:7px 10px 7px 32px;}
+#searchInput:focus,#dvSearch:focus,#dashSearch:focus,#procSearch:focus{border-color:var(--s);}
+.proc-view-flat .dv-search-wrap{background:transparent !important;}
+.fi-sel,.dv-fi-sel{font-size:13px;color:var(--n);border:1px solid var(--bd);border-radius:3px;background:#fff;padding:6px 26px 6px 10px;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23008D4D' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;}
+.proc-view-flat .dv-fi-sel{background-color:#fff !important;}
+.dv-count,.tb-count,.proc-view-flat #procCountLabel{font-size:13px;color:var(--sub) !important;font-variant-numeric:tabular-nums;}
+.tb-sep{background:var(--bd);}
+mark.hl{background:#D9F0E3;box-shadow:none;border-radius:2px;}
+
+/* ── Tabellen ── */
+thead th,.dv-table thead th,.dash-table thead th{background:var(--lg);color:var(--sub);border-bottom:1px solid var(--bd);}
+tbody tr:hover td,.dv-table tbody tr:hover td,.dash-table tbody tr:hover{background:#F7F9FB;}
+tbody tr.selected td,.dv-table tbody tr.selected td{background:var(--markering);border-left-color:var(--s);}
+.dash-table tbody tr.selected{background:var(--markering);}
+tbody td,.dv-table tbody td{border-bottom-color:var(--bd);}
+
+/* ── Panelen: wit, vlak, met lijnen ── */
+.tbl-panel,.dv-tbl-panel{border-right:1px solid var(--bd);}
+.detail-panel,.dv-detail-panel,.dash-detail{background:#fff;}
+.detail-term,.dv-detail-name{color:var(--n);}
+.section-label,.dv-section-label,.meta-key{color:var(--muted);}
+.detail-empty svg,.dv-detail-empty svg{stroke:var(--s);}
+.detail-image-wrap,.dash-modal-meta-grid{border-radius:0;}
+
+/* Hoeken 0–3px en geen schaduwen op knoppen, kaarten, badges en panelen */
+.bdg,.cat-pill,.dtype-badge,.dv-ext-badge,.dash-badge,.proc-type-badge,.proc-tile-team,.mc-tag,.mc-pad-pill,.mc-mini,.home-tile-breakdown span,
+.btn-icon,.btn-add,.btn-dv-add,.pf-back,.pf-zoom-grp,.pf-zbtn,.pf-fitbtn,.pf-step-panel-close,.dash-row-open,.dash-cta,.dash-modal-close,.mc-search-wrap,.mc-jump-pill{border-radius:3px;}
+.proc-tile,.proc-card,.dash-modal,.home-search-wrap,.home-tile,.home-about{border-radius:0;box-shadow:none;}
+.df-chip-link:hover,.dash-cta:hover{box-shadow:none;transform:none;}
+.pf-step-panel{box-shadow:none;}
+.dash-modal{border:1px solid var(--bd);}
+.dash-cta{background:var(--s);}
+.dash-cta:hover{background:var(--n);}
+
+/* Processen: tegels als vlakke vakken, wit vlak eromheen */
+.proc-view,.proc-view-flat,.proc-fullscreen-view{background:#fff;}
+.proc-tiles-scroll{padding:24px 28px 32px;}
+.proc-tiles-grid{max-width:none;gap:12px;}
+.proc-tile{border:1px solid var(--bd);transition:background .12s,border-color .12s;}
+.proc-tile:hover{transform:none;box-shadow:none;border-color:var(--s);background:#F7F9FB;}
+.proc-tile-active{box-shadow:none;border-color:var(--s);background:var(--markering);}
+.proc-tile-team{background:var(--lg);color:var(--s);}
+.proc-tile-meta{border-top-color:var(--bd);}
+.pf-nav{border-bottom-color:var(--bd);}
+.pf-canvas-stack{background:var(--lg);}
+
+/* ── Home ── */
+#view-home{background:#fff;}
+#view-home .proc-content{padding:0 28px 32px;}
+.home-content{max-width:1040px;margin:0;gap:0;}
+.home-sectie{padding:40px 0;border-bottom:1px solid var(--bd);}
+.home-sectie:last-child{border-bottom:0;}
+.home-sectie h2{font-size:22px;line-height:1.3;color:var(--s);margin:0 0 12px;font-weight:700;}
+.kop-accent::before{content:"";display:block;width:56px;height:4px;background:var(--lentegroen);margin-bottom:20px;}
+.home-sectie .intro{font-size:20px;line-height:1.5;font-weight:700;color:var(--s);max-width:60ch;margin:0 0 24px;}
+.home-search-wrap{background:#fff;border:1px solid var(--bd);max-width:720px;}
+.home-search-wrap:focus-within{border-color:var(--s);}
+.home-search-input-row input{font-size:16px;}
+.home-result-group-label{background:var(--lg);color:var(--muted);}
+.home-result-item{border-bottom-color:var(--bd);}
+.home-result-item:hover{background:var(--markering);}
+.home-tiles{gap:0;border-top:1px solid var(--bd);border-left:1px solid var(--bd);}
+.home-tile{--tile-c:var(--s);background:#fff;border:0;border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:20px 22px;transition:background .12s;}
+.home-tile:hover{transform:none;box-shadow:none;background:#F7F9FB;}
+.home-tile-num{font-weight:700;color:var(--s);}
+.home-tile-title{font-size:16px;font-weight:700;color:var(--n);}
+.home-tile-title svg{color:var(--lentegroen);}
+.home-tile-desc{font-size:14px;color:var(--sub);}
+.home-tile-breakdown span{background:var(--lg);color:var(--sub);}
+.home-tile:hover .home-tile-arrow{color:var(--lentegroen);}
+.home-about{background:none;border:0;border-left:3px solid var(--lentegroen);padding:2px 0 2px 16px;}
+.home-about-label{font-size:16px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--n);margin-bottom:4px;}
+.home-about-text{font-size:15px;line-height:1.6;color:var(--sub);max-width:72ch;}
+
+/* ── Voettekst: wit met lijn, zoals in de rapportages ── */
+.ftr{background:#fff;border-top:1px solid var(--bd);height:32px;flex:0 0 32px;padding:0 28px;}
+.ftr span,.ftr a{font-size:12px !important;color:var(--muted) !important;}
+.ftr a:hover{color:var(--s) !important;}
+
+@media (max-width:760px){
+  .omslag-wrap{padding:16px 16px 0;}
+  .omslag h1{font-size:30px;}
+  .omslag-tekst p{font-size:17px;}
+  .omslag-tekst{margin-top:32px;}
+  .lijncirkel{display:none;}
+  .omslag .tabs .hdr-nav-btn{padding:9px 12px;font-size:14px;}
+  .omslag-naam{display:none !important;}
+}
+@media print{
+  .omslag{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .omslag .tabs,.hdr-refresh{display:none;}
+}
+/* Vernieuw-knop leesbaar houden boven de lijncirkel */
+.omslag .hdr-refresh{position:relative;z-index:2;background:var(--n);border:1px solid rgba(255,255,255,.35);}
+.omslag .hdr-refresh:hover{background:#0A3D6B;}
+@media (max-width:760px){
+  .ftr{height:auto;flex:0 0 auto;padding:8px 16px;}
+  .ftr span:nth-child(2),.ftr span:first-child{display:none;}
+}
+/* Actief tabblad altijd Nachtblauw (oude per-tab accentkleuren vervallen) */
+#navHome.active,#navDefinities.active,#navProcessen.active,#navDatavelden.active,#navDashboards.active{color:var(--n);}
+.proc-view-flat .dv-fi-sel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23008D4D' stroke-width='2'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 9px center !important;}
