@@ -96,7 +96,7 @@ const COLOR_MAP = {
   orange: {bg:'#FFF0E6', color:'#993C1D'},
   teal:   {bg:'#E0F7F9', color:'#0C6E78'},
   red:    {bg:'#FAECE7', color:'#993C1D'},
-  gray:   {bg:'#F2F5F9', color:'#4A6180'},
+  gray:   {bg:'#F2F5F7', color:'#3D5A75'},
 };
 const STATUS_BADGE_CLASS = {
   'Vastgesteld': 'bdg-vastgesteld',

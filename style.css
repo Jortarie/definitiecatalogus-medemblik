@@ -858,3 +858,64 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
 .proc-view-flat .dv-search-wrap{background:var(--lg) !important;}
 .proc-view-flat .dv-fi-sel{background:var(--w) !important;}
 .proc-view-flat #procCountLabel{color:var(--sub) !important;}
+
+/* ===================================================================
+   HUISSTIJL: KLEUR, LETTER EN KRINGEN (okt 2026)
+   Alleen kleuren, lettergewichten en het kringen-motief zijn aangepast
+   naar de rapportage-huisstijl. Indeling, afmetingen en vormen blijven
+   zoals ze waren. Deze laag staat bewust onderaan.
+   =================================================================== */
+:root{
+  --s:#005496;--n:#002E56;--g:#008D4D;--lentegroen:#008D4D;--logogroen:#8DC63F;
+  --zb:#005496;--zg:#008D4D;
+  --lg:#F2F5F7;--bd:#D8DFE6;--sub:#3D5A75;--muted:#5F7387;--markering:#E3ECF5;
+}
+
+/* Lettertype: Plus Jakarta Sans in 300/400/700, cijfers tabulair */
+body{font-family:'Plus Jakarta Sans',Arial,sans-serif;font-variant-numeric:tabular-nums;}
+[style*="font-weight:600"],[style*="font-weight:800"]{font-weight:700 !important;}
+.term-cell,.dv-name,.dash-name,.proc-tile-naam,.dash-modal-title,.pf-nm,.home-title,.home-tile-num,.home-tile-title,
+.home-result-term,.home-result-group-label,.home-about-label,.dash-detail-title,.pf-step-panel-hdr,.mc-mini,.mc-tag-meer,
+.proc-card-title,.cat-pill,.hdr-refresh,.pf-zbtn,.mc-search-wrap input,.df-chip-link,.dv-used,.home-tile-breakdown,.proc-tile-meta{font-weight:700;}
+.home-sub,.detail-empty-hint{font-weight:300;}
+
+/* Kopbalk: verloop Saffier → Nacht */
+.hdr{background:linear-gradient(90deg,#005496,#002E56);}
+.hdr-nav-btn{color:rgba(255,255,255,.75);}
+.hdr-nav-btn:hover:not(.active){color:#fff;background:rgba(255,255,255,.12);}
+#navHome.active,#navDefinities.active,#navProcessen.active,#navDatavelden.active,#navDashboards.active{background:#fff;color:var(--n);}
+.hdr-nav-btn:focus-visible,.hdr-refresh:focus-visible{outline:2px solid var(--logogroen);outline-offset:2px;}
+
+/* Kringen: één groene lijncirkel op een band met hetzelfde verloop */
+.kringen-bg{position:absolute;top:0;left:0;width:100%;height:230px;z-index:0;overflow:hidden;background:linear-gradient(90deg,#005496,#002E56);}
+.kringen-bg .lijncirkel{position:absolute;right:-90px;top:-150px;width:380px;height:380px;}
+@media (max-width:760px){.kringen-bg .lijncirkel{display:none;}}
+.home-sub{color:#fff;}
+
+/* Accentkleuren: blauw als hoofdtoon, Lentegroen als enige accent */
+tbody tr:hover td,.dv-table tbody tr:hover td,.dash-table tbody tr:hover{background:#F2F5F7;}
+tbody tr.selected td,.dv-table tbody tr.selected td,.dash-table tbody tr.selected{background:var(--markering);}
+.proc-card.active-card{border-color:var(--s);}
+.proc-card.active-card::before{background:var(--lentegroen);}
+mark.hl{background:#D9F0E3;box-shadow:none;}
+.home-tile-title svg{color:var(--lentegroen);}
+
+/* Categorie- en typelabels binnen het huisstijlpalet */
+.cat-wmo,.dtype-badge.varchar,.proc-type-badge.mc,.proc-card-tag,.dash-badge.extern,.mc-tag-keuze{background:#E3ECF5;color:#005496;border-color:#9DBEDD;}
+.cat-jeugd,.dtype-badge.date,.dash-badge.intern,.mc-tag-datum{background:#E1F1E8;color:#006B3A;border-color:#A6D3BA;}
+.cat-sd,.dtype-badge.datetime{background:#F6E6F2;color:#8E1770;border-color:#E2B7D7;}
+.cat-toegang,.cat-instuit,.dtype-badge.decimal,.dtype-badge.bigint,.dtype-badge.int,.dtype-badge.tinyint,.dtype-badge.bit,.dv-ext-badge,.mc-tag-getal{background:#F2F5F7;color:#002E56;border-color:#D8DFE6;}
+.proc-tile-team{background:#E3ECF5;color:#005496;}
+
+/* Voettekst in Nachtblauw */
+.ftr{background:var(--n);}
+/* Statuslabels binnen het palet (de tekst in het label blijft de betekenis dragen) */
+.bdg-vastgesteld{background:#E1F1E8;color:#006B3A;}.bdg-vastgesteld::before{background:#008D4D;}
+.bdg-review{background:#E3ECF5;color:#005496;}.bdg-review::before{background:#005496;}
+.bdg-concept{background:#F6E6F2;color:#8E1770;}.bdg-concept::before{background:#B41E8E;}
+.bdg-vervallen{background:#F2F5F7;color:#5F7387;}.bdg-vervallen::before{background:#C3CDD7;}
+.bdg-leeg{background:#F2F5F7;color:#5F7387;}
+.kringen-bg .lijncirkel{top:-75px;}
+/* Geselecteerde rij: alleen links één blauwe streep, niet per cel */
+tbody tr.selected td,.dv-table tbody tr.selected td{border-left:0;}
+tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{border-left:3px solid var(--s);}
