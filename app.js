@@ -161,11 +161,15 @@ async function fetchAndMap(url, mapFn) {
   }
 }
 
+const schoon = s => String(s || '').replace(/\s+/g, ' ').trim(); // losse/dubbele spaties weg
+
 function mapDefinitiesRows(records) {
   const rows = [], rowIssues = [], seen = new Set();
   const VELD_KOLOMMEN = ['Veld1', 'Veld2', 'Veld3', 'Veld4', 'Veld5', 'Veld6', 'Veld7', 'Veld8'];
   for (const r of records) {
     const id = (r.id || '').trim();
+    // Lege regels in het Sheet (wel een id, geen term) stil overslaan.
+    if (!schoon(r.Term) && !schoon(r.Definitie)) continue;
     if (!id) { rowIssues.push(`Rij zonder id overgeslagen (term: "${r.Term || '?'}")`); continue; }
     if (seen.has(id)) { rowIssues.push(`Dubbele id "${id}" overgeslagen`); continue; }
     seen.add(id);
@@ -182,8 +186,8 @@ function mapDefinitiesRows(records) {
       .filter(v => /^DF-\d+$/i.test(v));
 
     rows.push({
-      id, term: r.Term || '', def: decodeText(r.Definitie), ctx: decodeText(r.Businesscontext),
-      fields: '', cat: (r.Categorie || '').trim(), team: (r.Team || '').trim(),
+      id, term: schoon(r.Term), def: decodeText(r.Definitie), ctx: decodeText(r.Businesscontext),
+      fields: '', cat: schoon(r.Categorie), team: schoon(r.Team),
       status: (r.Status || '').trim(), date: r.date || '', notes: decodeText(r.Notes),
       veldIds, fieldChips: [], fieldsFull: decodeText(r['Velden en berekenignen']),
       source: r.Source || '', changelog: decodeJsonField(r.Wijzigingshistorie, []),
@@ -224,11 +228,12 @@ function mapDataveldenRows(records) {
   const rows = [], rowIssues = [], seen = new Set();
   for (const r of records) {
     const id = (r.id || '').trim();
+    if (!schoon(r.Naam) && !schoon(r.Dataveld)) continue; // lege regel
     if (!id) { rowIssues.push(`Rij zonder id overgeslagen (name: "${r.Naam || '?'}")`); continue; }
     if (seen.has(id)) { rowIssues.push(`Dubbele id "${id}" overgeslagen (eerdere rij blijft staan)`); continue; }
     seen.add(id);
     rows.push({
-      id, name: r.Naam || '', desc: decodeText(r.Beschrijving), type: (r.Type || '').trim(),
+      id, name: schoon(r.Naam), desc: decodeText(r.Beschrijving), type: schoon(r.Type),
       src: r.Tabel || '', col: r.Dataveld || '', values: decodeText(r.values), ext: '',
     });
   }
@@ -239,12 +244,13 @@ function mapDashboardsRows(records) {
   const rows = [], rowIssues = [], seen = new Set();
   for (const r of records) {
     const id = (r.id || '').trim();
+    if (!schoon(r.Naam)) continue; // lege regel
     if (!id) { rowIssues.push(`Rij zonder id overgeslagen (name: "${r.Naam || '?'}")`); continue; }
     if (seen.has(id)) { rowIssues.push(`Dubbele id "${id}" overgeslagen`); continue; }
     seen.add(id);
     rows.push({
-      id, name: r.Naam || '', type: (r.type || '').trim(), desc: decodeText(r.Beschrijving),
-      loc: r.Locatie || '', team: (r.team || '').trim(), link: r.link || '', updated: r.updated || '',
+      id, name: schoon(r.Naam), type: (r.type || '').trim(), desc: decodeText(r.Beschrijving),
+      loc: r.Locatie || '', team: schoon(r.team), link: r.link || '', updated: r.updated || '',
       // Optionele kolom "Begrippen" (;-gescheiden D-ids, bijv. "D-001;D-014"):
       // welke definities dit dashboard al toont.
       dekt: (r.Begrippen || '').split(';').map(s => s.trim().toUpperCase()).filter(Boolean),
@@ -618,6 +624,23 @@ function renderTable() {
   }).join('');
 }
 
+/* Maakt van "D-012" in een tekst een klikbare verwijzing met de naam van
+   die definitie erachter, zodat je ziet waar het nummer nu naar wijst
+   (en een verkeerd nummer meteen opvalt). Een nummer dat niet bestaat
+   krijgt een vraagteken. Tekst tussen [vierkante haken] is een
+   instelbare waarde (bijv. "[31 dagen]") en krijgt een eigen markering. */
+function linkDefRefs(text) {
+  const byId = new Map(entries.map(x => [x.id, x]));
+  return escHtml(text || '')
+    .replace(/\[([^\]\n]{1,40})\]/g, '<span class="param" title="Instelbare waarde">$1</span>')
+    .replace(/\bD-\d{3}\b/g, id => {
+      const t = byId.get(id);
+      return t
+        ? `<a class="defref" href="#" data-defref="${id}" title="Open ${escHtml(t.term)}">${id}<span class="defref-term"> · ${escHtml(t.term)}</span></a>`
+        : `<span class="defref defref-kapot" title="Deze definitie bestaat niet">${id} (bestaat niet)</span>`;
+    });
+}
+
 function selectEntry(id) {
   currentId = id;
   const e = entries.find(x => x.id === id);
@@ -629,11 +652,26 @@ function selectEntry(id) {
   document.getElementById('dTerm').textContent = e.term;
   document.getElementById('dCatBadge').innerHTML = catPillHtml(e.cat);
   document.getElementById('dStatusBadge').innerHTML = statusBadgeHtml(e.status);
-  document.getElementById('dDef').textContent = e.def || '—';
+  document.getElementById('dDef').innerHTML = e.def ? linkDefRefs(e.def) : '—';
 
   toggleSection('dCtxSection', e.ctx, 'dCtx');
   toggleSection('dFieldsFullSection', e.fieldsFull, 'dFieldsFull');
   toggleSection('dNotesSection', e.notes, 'dNotes');
+  if (e.ctx) document.getElementById('dCtx').innerHTML = linkDefRefs(e.ctx);
+  if (e.fieldsFull) document.getElementById('dFieldsFull').innerHTML = linkDefRefs(e.fieldsFull);
+  if (e.notes) document.getElementById('dNotes').innerHTML = linkDefRefs(e.notes);
+
+  // Omgekeerde richting: in welke andere definities wordt dit begrip genoemd?
+  const genoemdIn = entries.filter(x => x.id !== e.id && new RegExp(`\\b${e.id}\\b`).test(`${x.def} ${x.ctx} ${x.notes} ${x.fieldsFull}`));
+  const refSec = document.getElementById('dRefsSection');
+  if (genoemdIn.length) {
+    document.getElementById('dRefsLabel').textContent = `Genoemd in ${genoemdIn.length} andere definitie${genoemdIn.length > 1 ? 's' : ''}`;
+    document.getElementById('dRefs').innerHTML = genoemdIn.map(x =>
+      `<button type="button" class="defref-chip" data-defref="${escHtml(x.id)}">${escHtml(x.id)} · ${escHtml(x.term)}</button>`).join('');
+    refSec.style.display = '';
+  } else {
+    refSec.style.display = 'none';
+  }
 
   const fieldsWrap = document.getElementById('dFields');
   const chips = (e.fieldChips || []);
@@ -2132,6 +2170,12 @@ function initInteractions() {
     });
   };
   byRow('tableBody', selectEntry);
+  // Klik op een D-nummer in een definitie: open die definitie (filters
+  // en zoekterm worden leeggemaakt, zodat hij zeker in de lijst staat).
+  document.getElementById('detailPanel').addEventListener('click', ev => {
+    const ref = ev.target.closest('[data-defref]');
+    if (ref) { ev.preventDefault(); openDefinitieFromChip(ref.dataset.defref); }
+  });
   byRow('dvTableBody', selectDvEntry);
   byRow('dashTableBody', selectDashEntry);
   document.getElementById('procList').addEventListener('click', ev => {

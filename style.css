@@ -939,3 +939,13 @@ body[data-tab="home"] .lijncirkel-top{display:block;}
 .proc-node:hover > rect:first-of-type,.proc-node:hover > polygon,.proc-node:hover > circle{stroke:#005496;}
 .pf-legend{gap:18px;font-size:12px;color:#3D5A75;}
 .pf-legend i{width:11px;height:11px;flex-shrink:0;}
+
+/* Verwijzingen naar andere definities (D-nummers) en instelbare waarden */
+.defref{color:#005496;font-weight:700;text-decoration:underline;text-decoration-color:#9DBEDD;text-underline-offset:2px;cursor:pointer;}
+.defref:hover{text-decoration-color:#005496;}
+.defref-term{font-weight:400;}
+.defref-kapot{color:#8E1770;text-decoration:none;cursor:default;}
+.param{background:#E3ECF5;color:#002E56;font-weight:700;padding:0 5px;border-radius:3px;border:1px solid #9DBEDD;white-space:nowrap;}
+.defref-chip{font:inherit;display:inline-flex;font-size:.72rem;font-weight:700;color:#005496;background:#fff;border:1px solid #9DBEDD;border-radius:3px;padding:3px 9px;cursor:pointer;text-align:left;}
+.defref-chip:hover{background:#E3ECF5;}
+.defref:focus-visible,.defref-chip:focus-visible{outline:2px solid #005496;outline-offset:2px;}
