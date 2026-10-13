@@ -924,10 +924,32 @@ function renderProcList() {
    stap 4 en 5 die beide naar 6 gaan) na hun laatste voorganger
    komen. ──────────────────────────────────────────────────────── */
 function computeStepLayers(steps) {
+  // Terugkoppelingen (bijv. "Nee → terug naar onderzoek") eerst
+  // opsporen met een diepte-eerst-doorloop vanaf de startstappen. Die
+  // tellen niet mee voor de kolomindeling; anders schuift een lus het
+  // hele proces terug naar voren en lopen de lijnen door elkaar.
+  const nrs = new Set(steps.map(s => s.stapNr));
+  const byNr = new Map(steps.map(s => [s.stapNr, s]));
+  const backEdges = new Set();
+  const state = new Map(); // 1 = op de stapel, 2 = klaar
+  function dfs(nr) {
+    state.set(nr, 1);
+    for (const next of (byNr.get(nr).volgendeStap || [])) {
+      if (!nrs.has(next)) continue;
+      if (state.get(next) === 1) backEdges.add(`${nr}>${next}`);
+      else if (!state.has(next)) dfs(next);
+    }
+    state.set(nr, 2);
+  }
+  const hasIncoming = new Set();
+  steps.forEach(s => (s.volgendeStap || []).forEach(n => hasIncoming.add(n)));
+  steps.filter(s => s.stapType === 'start' || !hasIncoming.has(s.stapNr)).forEach(s => { if (!state.has(s.stapNr)) dfs(s.stapNr); });
+  steps.forEach(s => { if (!state.has(s.stapNr)) dfs(s.stapNr); });
+
   const incoming = new Map(steps.map(s => [s.stapNr, []]));
   for (const s of steps) {
     for (const next of s.volgendeStap) {
-      if (incoming.has(next)) incoming.get(next).push(s.stapNr);
+      if (incoming.has(next) && !backEdges.has(`${s.stapNr}>${next}`)) incoming.get(next).push(s.stapNr);
     }
   }
   const layer = new Map();
@@ -1005,7 +1027,7 @@ function computeSubrows(lanes, layerMap) {
   return { subrowByStep, cellCountByLane };
 }
 
-function wrapToTwoLines(str, maxCharsPerLine) {
+function wrapToTwoLines(str, maxCharsPerLine, maxLines = 2) {
   const words = String(str || '').split(/\s+/).filter(Boolean);
   const lines = [];
   let current = '';
@@ -1014,12 +1036,12 @@ function wrapToTwoLines(str, maxCharsPerLine) {
     if (candidate.length > maxCharsPerLine && current) {
       lines.push(current);
       current = word;
-      if (lines.length === 2) break;
+      if (lines.length === maxLines) break;
     } else {
       current = candidate;
     }
   }
-  if (lines.length < 2 && current) lines.push(current);
+  if (lines.length < maxLines && current) lines.push(current);
   const consumedWords = lines.join(' ').split(/\s+/).length;
   if (consumedWords < words.length) {
     const last = lines[lines.length - 1];
@@ -1029,11 +1051,15 @@ function wrapToTwoLines(str, maxCharsPerLine) {
 }
 
 function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
-  const boxW = 212, cardH = 80, lineHeight = 16, colGap = 112, cellH = 176, padding = 46;
-  const laneLabelW = 42;
+  // Compacte maten (okt 2026): kleinere kaarten en kieren, zodat een
+  // heel proces vaker in één scherm past zonder te hoeven scrollen.
+  const boxW = 160, cardH = 60, lineHeight = 14.5, colGap = 44, cellH = 116, padding = 22;
+  const laneLabelW = 138;
 
   const wrapped = new Map();
-  for (const s of steps) wrapped.set(s.stapNr, wrapToTwoLines(s.stapNaam, 19));
+  for (const s of steps) wrapped.set(s.stapNr, ['start','einde','beslissing','parallel'].includes(s.stapType)
+    ? wrapToTwoLines(s.stapNaam, 22)
+    : wrapToTwoLines(s.stapNaam, 16, 3));
 
   const maxLayer = Math.max(...layerMap.values());
   const { subrowByStep, cellCountByLane } = computeSubrows(lanes, layerMap);
@@ -1046,7 +1072,8 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   // rolnaam (bijv. "Mdw. of Coördinator Financiën Sociaal Domein") mag
   // niet hoger uitvallen dan de rijbaan zelf, anders prikt de tekst in
   // de rijbaan erboven/eronder als die maar één rij stappen bevat.
-  const laneLabelMinHeight = label => Math.ceil((label || '').toUpperCase().length * 7.6) + 24;
+  const laneLabelLines = label => wrapToTwoLines(label, 15, 3);
+  const laneLabelMinHeight = label => laneLabelLines(label).length * 14 + 24;
 
   const laneTop = new Map();
   const laneHeight = new Map();
@@ -1086,17 +1113,17 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
 
   // Halve breedte per vorm — bepaalt waar een pijl de vorm raakt.
   function halfW(stapType) {
-    if (stapType === 'start' || stapType === 'einde') return 26;
-    if (stapType === 'beslissing' || stapType === 'parallel') return 32;
+    if (stapType === 'start' || stapType === 'einde') return 17;
+    if (stapType === 'beslissing' || stapType === 'parallel') return 22;
     return boxW / 2; // proces, actie, subproces
   }
 
   // Ja/nee/kort/langdurig-labels op pijlen krijgen een betekenisvolle kleur.
   function arrowLabelStyle(label) {
     const l = (label || '').trim().toLowerCase();
-    if (l === 'ja' || l === 'akkoord')  return { bg: '#E1F5EE', border: '#9FE1CB', text: '#0B6E49' };
-    if (l === 'nee' || l === 'afwijzen') return { bg: '#FAECE7', border: '#F2B49B', text: '#993C1D' };
-    return { bg: '#E6F1FB', border: '#B5D4F4', text: '#185FA5' };
+    if (l === 'ja' || l === 'akkoord')  return { bg: '#E1F1E8', border: '#A6D3BA', text: '#006B3A' };
+    if (l === 'nee' || l === 'afwijzen') return { bg: '#F6E6F2', border: '#E2B7D7', text: '#8E1770' };
+    return { bg: '#FFFFFF', border: '#9DBEDD', text: '#005496' };
   }
 
   // Lange vertakkingslabels (bijv. "Maatwerkovereenkomst") over twee
@@ -1127,9 +1154,9 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   // linkerzijde, zodat een lus nooit met de gewone voortgangsrichting
   // (die altijd via links/rechts loopt) kan worden verward.
   function halfH(stapType) {
-    if (stapType === 'start' || stapType === 'einde') return 26;
-    if (stapType === 'beslissing' || stapType === 'parallel') return 32;
-    return cardH / 2; // 40 — proces, actie, subproces (grootste vorm)
+    if (stapType === 'start' || stapType === 'einde') return 17;
+    if (stapType === 'beslissing' || stapType === 'parallel') return 22;
+    return cardH / 2; // proces, actie, subproces (grootste vorm)
   }
   const SHAPE_MAXHALF = cardH / 2; // grootste mogelijke halve hoogte, voor veilige marges
 
@@ -1183,8 +1210,8 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
           // boven (of onder, als er boven geen ruimte is) de
           // tussenliggende vakjes — i.p.v. er dwars doorheen, en zonder
           // boog: enkel rechte stukken, net als de officiële platen.
-          const bowUp = Math.min(y1, y2) > padding + cellH * 0.6;
-          const bow = 54 + 16 * (layerDist - 1);
+          const bowUp = Math.min(y1, y2) > padding + cellH * 0.75;
+          const bow = 40 + 10 * (layerDist - 1);
           const shelfY = bowUp ? Math.min(y1, y2) - bow : Math.max(y1, y2) + bow;
           pts = [{ x: x1, y: y1 }, { x: x1 + 22, y: y1 }, { x: x1 + 22, y: shelfY },
                  { x: x2 - 22, y: shelfY }, { x: x2 - 22, y: y2 }, { x: x2 - 2, y: y2 }];
@@ -1227,15 +1254,24 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
           // Reisviveau ligt altijd voorbij de grootst mógelijke vormhoogte
           // in deze rijbaan (niet alleen die van deze stap) plus marge —
           // zo schampt de lijn nooit een ander vakje in dezelfde rij.
-          const travelY = exitTop ? from.cy - SHAPE_MAXHALF - 16 : from.cy + SHAPE_MAXHALF + 16;
+          // Vormen met de naam eronder (start/einde/beslissing): de lus
+          // vertrekt onder die naam langs, niet er dwars doorheen.
+          const nameBelow = ['start', 'einde', 'beslissing', 'parallel'].includes(fromType)
+            ? halfH(fromType) + 8 + (wrapped.get(s.stapNr) || []).length * lineHeight : 0;
+          const travelY = exitTop
+            ? from.cy - SHAPE_MAXHALF - 12
+            : from.cy + Math.max(SHAPE_MAXHALF + 12, nameBelow + 6);
           let chX = colRightEdge(toLayer) + colGap / 2;
           const used = chanUseByTargetLayer.get(toLayer) || 0;
-          chX += used * 13;
+          chX += used * 10;
           chanUseByTargetLayer.set(toLayer, used + 1);
           const enterX = to.cx + halfW(toType) + 2;
+          // Binnenkomen net boven het midden van de rechterzijde, zodat de
+          // lus niet samenvalt met de gewone pijl die daar vertrekt.
+          const enterY = to.cy - Math.min(14, halfH(toType) - 6);
           pts = [
             { x: from.cx, y: boundaryY }, { x: from.cx, y: travelY },
-            { x: chX, y: travelY }, { x: chX, y: to.cy }, { x: enterX, y: to.cy },
+            { x: chX, y: travelY }, { x: chX, y: enterY }, { x: enterX, y: enterY },
           ];
           labelX = (from.cx + chX) / 2; labelY = travelY + (exitTop ? -10 : 18);
         }
@@ -1311,18 +1347,19 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   let arrowLabels = '';
   edges.forEach(edge => {
     const d = polylineToPath(edge.pts, edge.jumps);
-    const stroke = edge.backward ? '#C77A3A' : '#8CA0BC';
+    const stroke = edge.backward ? '#B41E8E' : '#7F93AB';
     const marker = edge.backward ? 'proc-arrowhead-terug' : 'proc-arrowhead';
-    arrows += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="2" marker-end="url(#${marker})"/>`;
+    const dash = edge.backward ? ' stroke-dasharray="5 4"' : '';
+    arrows += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.6"${dash} marker-end="url(#${marker})"/>`;
     if (edge.label) {
       const st = arrowLabelStyle(edge.label);
       const lines = wrapLabel(edge.label);
-      const w = Math.max(40, Math.max(...lines.map(l => l.length)) * 7 + 20);
-      const h = lines.length > 1 ? 38 : 25;
-      arrowLabels += `<rect x="${edge.labelX - w / 2}" y="${edge.labelY - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="${st.bg}" stroke="${st.border}" stroke-width="1.2"/>`;
+      const w = Math.max(32, Math.max(...lines.map(l => l.length)) * 6.2 + 14);
+      const h = lines.length > 1 ? 32 : 20;
+      arrowLabels += `<rect x="${edge.labelX - w / 2}" y="${edge.labelY - h / 2}" width="${w}" height="${h}" rx="3" fill="${st.bg}" stroke="${st.border}" stroke-width="1"/>`;
       lines.forEach((line, i) => {
-        const ly = lines.length > 1 ? edge.labelY - 6 + i * 13 : edge.labelY + 4;
-        arrowLabels += `<text x="${edge.labelX}" y="${ly}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${st.text}">${escHtml(line)}</text>`;
+        const ly = lines.length > 1 ? edge.labelY - 4 + i * 12 : edge.labelY + 3.5;
+        arrowLabels += `<text x="${edge.labelX}" y="${ly}" text-anchor="middle" font-size="10" font-weight="700" fill="${st.text}">${escHtml(line)}</text>`;
       });
     }
   });
@@ -1333,10 +1370,16 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   let laneBg = '';
   lanes.forEach((lane, laneIdx) => {
     const y = laneTop.get(laneIdx), h = laneHeight.get(laneIdx);
-    if (laneIdx % 2 === 1) laneBg += `<rect x="0" y="${y}" width="${svgWidth}" height="${h}" fill="#F7FAFC"/>`;
-    if (laneIdx > 0) laneBg += `<line x1="0" y1="${y}" x2="${svgWidth}" y2="${y}" stroke="#DDE3EC" stroke-width="1"/>`;
-    laneBg += `<text x="${padding / 2 + 6}" y="${y + h / 2}" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing="0.4" fill="#5C7A93" transform="rotate(-90 ${padding / 2 + 6} ${y + h / 2})">${escHtml(lane.label.toUpperCase())}</text>`;
+    if (laneIdx % 2 === 1) laneBg += `<rect x="0" y="${y}" width="${svgWidth}" height="${h}" fill="#F2F5F7"/>`;
+    laneBg += `<line x1="0" y1="${y}" x2="${svgWidth}" y2="${y}" stroke="#D8DFE6" stroke-width="1"/>`;
+    const lblLines = laneLabelLines(lane.label);
+    const ly0 = y + h / 2 - (lblLines.length - 1) * 7 + 4;
+    lblLines.forEach((line, i) => {
+      laneBg += `<text x="${padding - 6}" y="${ly0 + i * 14}" font-size="10.5" font-weight="700" fill="#3D5A75">${escHtml(line)}</text>`;
+    });
   });
+  laneBg += `<line x1="0" y1="${svgHeight - padding * 0.5}" x2="${svgWidth}" y2="${svgHeight - padding * 0.5}" stroke="#D8DFE6" stroke-width="1"/>`;
+  laneBg += `<line x1="${padding + laneLabelW - 14}" y1="${padding}" x2="${padding + laneLabelW - 14}" y2="${svgHeight - padding * 0.5}" stroke="#D8DFE6" stroke-width="1"/>`;
 
   // Stijl per staptype — kleuren consistent met de rest van de app
   // (huisstijl), vormen sinds de swimlane-overstap wél echte BPMN-
@@ -1347,13 +1390,13 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   // een lichte ondergrond — zodat die ook bij 9-10px nog voldoende
   // contrast houdt (WCAG AA, ≥4.5:1 op wit).
   const STEP_TYPE_STYLE = {
-    start:      { accent: '#1D9E75', tint: '#E1F5EE', text: '#0B6E49' },
-    proces:     { accent: '#005496', tint: '#E6F1FB', text: '#004178', label: 'Processtap' },
-    beslissing: { accent: '#F26722', tint: '#FFF0E6', text: '#B1490F' },
-    parallel:   { accent: '#F26722', tint: '#FFF0E6', text: '#B1490F' },
-    actie:      { accent: '#7F77DD', tint: '#EDE9FC', text: '#4C3FC9', label: 'Actie / taak' },
-    subproces:  { accent: '#4A6180', tint: '#F2F5F9', text: '#334A63' },
-    einde:      { accent: '#0B6E49', tint: '#E1F5EE', text: '#0B6E49' },
+    start:      { accent: '#008D4D', tint: '#E1F1E8', text: '#006B3A' },
+    proces:     { accent: '#005496', tint: '#E3ECF5', text: '#005496', label: 'Processtap' },
+    beslissing: { accent: '#002E56', tint: '#FFFFFF', text: '#002E56' },
+    parallel:   { accent: '#002E56', tint: '#FFFFFF', text: '#002E56' },
+    actie:      { accent: '#9DBEDD', tint: '#F2F5F7', text: '#3D5A75', label: 'Actie / taak' },
+    subproces:  { accent: '#5F7387', tint: '#F2F5F7', text: '#3D5A75' },
+    einde:      { accent: '#008D4D', tint: '#008D4D', text: '#006B3A' },
   };
 
   let boxes = '';
@@ -1368,34 +1411,35 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
 
     if (s.stapType === 'start' || s.stapType === 'einde') {
       // Event: cirkel, naam eronder (klassieke BPMN-weergave).
-      const r = 26;
+      const r = 17;
       const sel = isSelected ? `<circle cx="${p.cx}" cy="${p.cy}" r="${r + 5}" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
-      const labelY0 = p.cy + r + 18;
+      const labelY0 = p.cy + r + 15;
       const nameLinesHtml = nameLines.map((line, i) =>
         `<text x="${p.cx}" y="${labelY0 + i * lineHeight}" text-anchor="middle" font-size="12" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}">
         ${sel}
-        <circle cx="${p.cx}" cy="${p.cy}" r="${r}" fill="${style.tint}" stroke="${style.accent}" stroke-width="${s.stapType === 'einde' ? 3 : 2}" filter="url(#proc-shadow)"/>
+        <circle cx="${p.cx}" cy="${p.cy}" r="${r}" fill="${s.stapType === 'einde' ? '#008D4D' : '#FFFFFF'}" stroke="${style.accent}" stroke-width="${s.stapType === 'einde' ? 3 : 2.5}"/>
         ${nameLinesHtml}
       </g>`;
     } else if (s.stapType === 'beslissing' || s.stapType === 'parallel') {
       // Gateway: ruit (diamant), vraag/label eronder. Parallel-gateway
       // krijgt een "+" in het midden (BPMN-conventie).
-      const hw = 32;
+      const hw = 22;
       const pts = `${p.cx},${p.cy - hw} ${p.cx + hw},${p.cy} ${p.cx},${p.cy + hw} ${p.cx - hw},${p.cy}`;
       const sel = isSelected ? `<polygon points="${p.cx},${p.cy - hw - 5} ${p.cx + hw + 5},${p.cy} ${p.cx},${p.cy + hw + 5} ${p.cx - hw - 5},${p.cy}" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
       const plus = s.stapType === 'parallel'
-        ? `<path d="M ${p.cx - 10} ${p.cy} H ${p.cx + 10} M ${p.cx} ${p.cy - 10} V ${p.cy + 10}" stroke="${style.accent}" stroke-width="3" stroke-linecap="round"/>` : '';
-      const labelY0 = p.cy + hw + 18;
+        ? `<path d="M ${p.cx - 8} ${p.cy} H ${p.cx + 8} M ${p.cx} ${p.cy - 8} V ${p.cy + 8}" stroke="${style.accent}" stroke-width="2.5" stroke-linecap="round"/>`
+        : `<text x="${p.cx}" y="${p.cy + 5}" text-anchor="middle" font-size="14" font-weight="700" fill="${style.accent}">?</text>`;
+      const labelY0 = p.cy + hw + 15;
       const nameLinesHtml = nameLines.map((line, i) =>
         `<text x="${p.cx}" y="${labelY0 + i * lineHeight}" text-anchor="middle" font-size="12" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}">
         ${sel}
-        <polygon points="${pts}" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.8" filter="url(#proc-shadow)"/>
+        <polygon points="${pts}" fill="${style.tint}" stroke="${style.accent}" stroke-width="2"/>
         ${plus}
         ${nameLinesHtml}
       </g>`;
@@ -1405,31 +1449,31 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
       const x = p.cx - boxW / 2, y = p.cy - cardH / 2;
       const sel = isSelected ? `<rect x="${x - 5}" y="${y - 5}" width="${boxW + 10}" height="${cardH + 10}" rx="14" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
       const nameLinesHtml = nameLines.map((line, i) =>
-        `<text x="${p.cx}" y="${p.cy - (nameLines.length - 1) * lineHeight / 2 + i * lineHeight + 5}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${style.text}">${escHtml(line)}</text>`
+        `<text x="${p.cx}" y="${p.cy - (nameLines.length - 1) * lineHeight / 2 + i * lineHeight + 9}" text-anchor="middle" font-size="12" font-weight="700" fill="${style.text}">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}"${gotoAttr}>
         ${sel}
-        <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="10" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.6" stroke-dasharray="5 4"/>
-        <text x="${p.cx}" y="${y + 18}" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="1" fill="${style.text}">VERVOLGPROCES →</text>
+        <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="3" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.4" stroke-dasharray="5 4"/>
+        <text x="${p.cx}" y="${y + 13}" text-anchor="middle" font-size="9" font-weight="700" letter-spacing=".6" fill="${style.text}">VERVOLGPROCES →</text>
         ${nameLinesHtml}
       </g>`;
     } else {
-      // Activiteit: witte kaart, gekleurde accentbalk boven, type-chip + stapnummer.
-      const label = STEP_TYPE_STYLE[s.stapType]?.label || style.label || 'Processtap';
+      // Activiteit: vlakke kaart met gekleurde streep links, stapnummer
+      // en de naam over maximaal twee regels — geen typechip meer, het
+      // type staat in de kleur van de streep (zie legenda).
       const x = p.cx - boxW / 2, y = p.cy - cardH / 2;
-      const sel = isSelected ? `<rect x="${x - 5}" y="${y - 5}" width="${boxW + 10}" height="${cardH + 10}" rx="17" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
+      const sel = isSelected ? `<rect x="${x - 4}" y="${y - 4}" width="${boxW + 8}" height="${cardH + 8}" rx="5" fill="none" stroke="${selColor}" stroke-width="2.5"/>` : '';
+      const textY0 = p.cy - (nameLines.length - 1) * lineHeight / 2 + 4.5;
       const nameLinesHtml = nameLines.map((line, i) =>
-        `<text x="${x + 16}" y="${y + 50 + i * lineHeight}" font-size="13" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
+        `<text x="${x + 34}" y="${textY0 + i * lineHeight}" font-size="12.5" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
       <g class="proc-node" data-stapnr="${s.stapNr}">
         ${sel}
-        <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="12" fill="#FFFFFF" stroke="${isSelected ? '#005496' : '#DDE3EC'}" stroke-width="${isSelected ? 2 : 1.3}" filter="url(#proc-shadow)"/>
-        <path d="M ${x + 12} ${y} H ${x + boxW - 12} A 12 12 0 0 1 ${x + boxW} ${y + 12} V ${y + 4.5} H ${x} V ${y + 12} A 12 12 0 0 1 ${x + 12} ${y} Z" fill="${style.accent}"/>
-        <text x="${x + 16}" y="${y + 26}" font-size="9" font-weight="700" letter-spacing="1" fill="${style.text}">${escHtml(label.toUpperCase())}</text>
-        <circle cx="${x + boxW - 22}" cy="${y + 24}" r="11" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.2"/>
-        <text x="${x + boxW - 22}" y="${y + 28}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${style.text}">${escHtml(String(s.stapNr))}</text>
+        <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="3" fill="${s.stapType === 'actie' ? '#F2F5F7' : '#FFFFFF'}" stroke="${isSelected ? '#005496' : '#C3CDD7'}" stroke-width="${isSelected ? 1.6 : 1}"/>
+        <rect x="${x}" y="${y}" width="5" height="${cardH}" fill="${style.accent}"/>
+        <text x="${x + 19}" y="${p.cy + 4}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${style.text}">${escHtml(String(s.stapNr))}</text>
         ${nameLinesHtml}
       </g>`;
     }
@@ -1438,10 +1482,10 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   return `<svg id="procFlowSvg" viewBox="0 0 ${svgWidth} ${svgHeight}" data-nw="${svgWidth}" style="height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="proc-arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-        <path d="M0,0 L9,4.5 L0,9 Z" fill="#A7B8CE"/>
+        <path d="M0,0 L9,4.5 L0,9 Z" fill="#7F93AB"/>
       </marker>
       <marker id="proc-arrowhead-terug" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-        <path d="M0,0 L9,4.5 L0,9 Z" fill="#C77A3A"/>
+        <path d="M0,0 L9,4.5 L0,9 Z" fill="#B41E8E"/>
       </marker>
       <filter id="proc-shadow" x="-20%" y="-20%" width="140%" height="150%">
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#002E56" flood-opacity="0.12"/>
@@ -1455,13 +1499,13 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
 }
 
 const NORMAAL_LEGEND = `
-  <span><i style="background:#1D9E75;border-radius:50%;"></i>Start (event)</span>
-  <span><i style="background:#005496;"></i>Processtap</span>
-  <span><i style="background:#7F77DD;"></i>Actie / taak</span>
-  <span><i style="background:#F26722;transform:rotate(45deg);"></i>Gateway (beslissing)</span>
-  <span><i style="background:#4A6180;border:1px dashed #4A6180;background:transparent;"></i>Vervolgproces</span>
-  <span><i style="background:#0B6E49;border-radius:50%;"></i>Einde (event)</span>
-  <span><i style="background:#C77A3A;border-radius:1px;width:14px;height:2px;"></i>Terugkoppeling (lus)</span>`;
+  <span><i style="background:#fff;border:2.5px solid #008D4D;border-radius:50%;"></i>Start</span>
+  <span><i style="background:#005496;width:5px;height:12px;border-radius:0;"></i>Processtap</span>
+  <span><i style="background:#9DBEDD;width:5px;height:12px;border-radius:0;"></i>Actie / taak</span>
+  <span><i style="background:#fff;border:2px solid #002E56;transform:rotate(45deg);border-radius:0;"></i>Beslissing</span>
+  <span><i style="background:transparent;border:1.4px dashed #5F7387;border-radius:0;"></i>Vervolgproces</span>
+  <span><i style="background:#008D4D;border-radius:50%;"></i>Einde</span>
+  <span><i style="background:none;border-top:2px dashed #B41E8E;border-radius:0;width:16px;height:0;"></i>Terug naar eerdere stap</span>`;
 
 /* Kleuren per fase-categorie (MensCentraal) — zelfde huisstijlpalet
    als de rest van de app. 'header' is de donkere fase-balk (witte
@@ -1718,7 +1762,10 @@ function applyProcZoom() {
   // 'Passend' mag ook licht opschalen (max 118%) als het diagram smaller
   // is dan het paneel — zo blijft het canvas niet nodeloos klein/leeg
   // wanneer een proces weinig stappen/rijbanen heeft.
-  const scale = procZoom === 'fit' ? Math.min(1.18, (scroller.clientWidth - 20) / nw) : procZoom;
+  let scale = procZoom === 'fit' ? Math.min(1.18, (scroller.clientWidth - 20) / nw) : procZoom;
+  // Onder 70% wordt de tekst te klein om te lezen: dan liever 85% en
+  // horizontaal scrollen.
+  if (procZoom === 'fit' && scale < 0.7) scale = 0.8;
   svg.style.width = Math.round(nw * scale) + 'px';
   const label = document.getElementById('flowZoomLabel');
   if (label) label.textContent = Math.round(scale * 100) + '%';
@@ -1751,7 +1798,7 @@ function renderNormFlow(p, selectedStapNr) {
   if (procZoom === 'fit') {
     const svg = document.getElementById('procFlowSvg');
     const scroller = document.getElementById('flowScroll');
-    if (svg && scroller && (scroller.clientWidth - 20) / parseFloat(svg.dataset.nw) < 0.7) procZoom = 1;
+    /* minimale leesbare zoom zit in applyProcZoom */
   }
   applyProcZoom();
   if (keep) { const s = document.getElementById('flowScroll'); s.scrollLeft = keep.l; s.scrollTop = keep.t; }
@@ -2009,6 +2056,7 @@ function tabFromLocation() {
    ==================================================================== */
 function switchMainTab(tab) {
   activeMainTab = tab;
+  document.body.dataset.tab = tab; // lijncirkel alleen op Home (zie style.css)
   const views = {
     home: 'view-home',
     definities: 'view-definities',
