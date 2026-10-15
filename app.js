@@ -1720,11 +1720,6 @@ function renderHomeSearch() {
         <span class="home-result-term">${hlHtml(e.term, q)}</span>
         ${statusBadgeHtml(e.status)}
       </div>`) +
-    group('Datavelden', dvs, d => `
-      <div class="home-result-item" data-home-dv="${escHtml(d.id)}">
-        <span class="home-result-term">${hlHtml(d.name, q)}</span>
-        <span class="home-result-sub">${escHtml(d.src)}</span>
-      </div>`) +
     group('Processen', procs, p => `
       <div class="home-result-item" data-home-proc="${escHtml(p.id)}">
         <span class="home-result-term">${hlHtml(p.naam, q)}</span>
@@ -1734,7 +1729,12 @@ function renderHomeSearch() {
       <div class="home-result-item" data-home-dash="${escHtml(d.id)}">
         <span class="home-result-term">${hlHtml(d.name, q)}</span>
         ${d.type ? `<span class="dash-badge ${dashTypeClass(d.type)}">${escHtml(d.type)}</span>` : ''}
-      </div>`);
+      </div>` +
+    group('Datavelden', dvs, d => `
+      <div class="home-result-item" data-home-dv="${escHtml(d.id)}">
+        <span class="home-result-term">${hlHtml(d.name, q)}</span>
+        <span class="home-result-sub">${escHtml(d.src)}</span>
+      </div>`));
   wrap.classList.add('show');
 }
 
