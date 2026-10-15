@@ -194,7 +194,9 @@ function mapDefinitiesRows(records) {
       // Optionele kolom "Procespad": één stap ("Besluit Wmo") of een route
       // ("Beginstap → Eindstap"), eventueel met procesnaam ervoor
       // ("Uitvoeren Wmo — kortdurig: Besluit Wmo").
-      procespad: schoon(r.Procespad),
+      // Of via twee keuzemenu's in het Sheet: "Processtap van" (verplicht) en
+      // "Processtap tot" (optioneel), elk als "Procesnaam: Stapnaam".
+      procespad: schoon(r.Procespad) || [schoon(r['Processtap van']), schoon(r['Processtap tot'])].filter(Boolean).join(' → '),
       // Optionele kolom "Uitsplitsingen" (;-gescheiden, bijv. "team;wet"):
       // nog niet gebruikt in de huidige weergave, maar blijft
       // meegelezen zodat een toekomstige uitsplitsing er zo bij kan.
