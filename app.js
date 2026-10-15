@@ -61,7 +61,7 @@ function decodeJsonField(value, fallback) {
    SHEETS-URLS — vul hier de gepubliceerde CSV-links van de 3 tabs in.
    ==================================================================== */
 const SHEET_URLS = {
-  definities: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1044637075&single=true&output=csv',
+  definities: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1401876817&single=true&output=csv',
   datavelden: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1189154651&single=true&output=csv',
   dashboards: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1394577148&single=true&output=csv',
   processen: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=269674294&single=true&output=csv',
