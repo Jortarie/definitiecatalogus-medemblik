@@ -191,6 +191,12 @@ function mapDefinitiesRows(records) {
       veldIds, fieldChips: [], fieldsFull: decodeText(r['Velden en berekeningen'] || r['Velden en berekenignen']),
       source: r.Source || '', changelog: decodeJsonField(r.Wijzigingshistorie, []),
       image: (r.Afbeelding || '').trim(),
+      // Optionele kolom "Procespad": één stap ("Besluit Wmo") of een route
+      // ("Beginstap → Eindstap"), eventueel met procesnaam ervoor
+      // ("Uitvoeren Wmo — kortdurig: Besluit Wmo").
+      // Of via twee keuzemenu's in het Sheet: "Processtap van" (verplicht) en
+      // "Processtap tot" (optioneel), elk als "Procesnaam: Stapnaam".
+      procespad: schoon(r.Procespad) || [schoon(r['Processtap van']), schoon(r['Processtap tot'])].filter(Boolean).join(' → '),
       // Optionele kolom "Uitsplitsingen" (;-gescheiden, bijv. "team;wet"):
       // nog niet gebruikt in de huidige weergave, maar blijft
       // meegelezen zodat een toekomstige uitsplitsing er zo bij kan.
@@ -585,6 +591,24 @@ function selectEntry(id) {
   document.getElementById('dDate').textContent = e.date || '—';
   document.getElementById('dCat').textContent = e.cat || '—';
   document.getElementById('dStatus').textContent = e.status || '—';
+
+  // Procespad: knoppen naar de processen waarin dit begrip oplicht.
+  const padSec = document.getElementById('dPadSection');
+  const pad = e.procespad ? berekenProcespad(e.procespad) : null;
+  if (e.procespad) {
+    document.getElementById('dPadTekst').textContent = e.procespad;
+    document.getElementById('dPadKnoppen').innerHTML = pad
+      ? [...pad.keys()].map(pid => {
+          const p = procEntries.find(x => x.id === pid);
+          return `<button type="button" class="pad-knop" data-pad-def="${escHtml(e.id)}" data-pad-proc="${escHtml(pid)}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.5"></circle><circle cx="19" cy="12" r="2.5"></circle><path d="M7.5 12h9"></path></svg>
+            ${escHtml(p ? p.naam : pid)}</button>`;
+        }).join('')
+      : `<span class="pad-fout">Stappen niet gevonden in de processen. Controleer de stapnamen.</span>`;
+    padSec.style.display = '';
+  } else {
+    padSec.style.display = 'none';
+  }
 
   const imgSection = document.getElementById('dImageSection');
   const imgEl = document.getElementById('dImage');
@@ -1015,7 +1039,10 @@ function wrapToTwoLines(str, maxCharsPerLine, maxLines = 2) {
   return lines;
 }
 
-function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
+function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr, pad) {
+  // pad (optioneel): { nodes:Set<stapNr>, edges:Set<'van>naar'> } — de route
+  // van een definitie. Die licht op; de rest van de plaat wordt gedimd.
+  const padCls = nr => pad ? (pad.nodes.has(nr) ? ' pad-aan' : ' pad-uit') : '';
   // Compacte maten (okt 2026): kleinere kaarten en kieren, zodat een
   // heel proces vaker in één scherm past zonder te hoeven scrollen.
   const boxW = 160, cardH = 60, lineHeight = 14.5, colGap = 44, cellH = 116, padding = 22;
@@ -1242,7 +1269,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         }
       }
 
-      edges.push({ backward, pts, label, labelX, labelY });
+      edges.push({ backward, pts, label, labelX, labelY, van: s.stapNr, naar: nextNr });
     });
   }
 
@@ -1312,11 +1339,14 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
   let arrowLabels = '';
   edges.forEach(edge => {
     const d = polylineToPath(edge.pts, edge.jumps);
-    const stroke = edge.backward ? '#B41E8E' : '#7F93AB';
-    const marker = edge.backward ? 'proc-arrowhead-terug' : 'proc-arrowhead';
-    const dash = edge.backward ? ' stroke-dasharray="5 4"' : '';
-    arrows += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.6"${dash} marker-end="url(#${marker})"/>`;
+    const opPad = pad && pad.edges.has(`${edge.van}>${edge.naar}`);
+    const stroke = opPad ? '#005496' : edge.backward ? '#B41E8E' : '#7F93AB';
+    const marker = opPad ? 'proc-arrowhead-pad' : edge.backward ? 'proc-arrowhead-terug' : 'proc-arrowhead';
+    const dash = edge.backward && !opPad ? ' stroke-dasharray="5 4"' : '';
+    const dim = pad && !opPad ? ' opacity="0.18"' : '';
+    arrows += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${opPad ? 2.8 : 1.6}"${dash}${dim} marker-end="url(#${marker})"/>`;
     if (edge.label) {
+      if (pad && !opPad) arrowLabels += '<g opacity="0.25">';
       const st = arrowLabelStyle(edge.label);
       const lines = wrapLabel(edge.label);
       const w = Math.max(32, Math.max(...lines.map(l => l.length)) * 6.2 + 14);
@@ -1326,6 +1356,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         const ly = lines.length > 1 ? edge.labelY - 4 + i * 12 : edge.labelY + 3.5;
         arrowLabels += `<text x="${edge.labelX}" y="${ly}" text-anchor="middle" font-size="10" font-weight="700" fill="${st.text}">${escHtml(line)}</text>`;
       });
+      if (pad && !opPad) arrowLabels += '</g>';
     }
   });
 
@@ -1383,7 +1414,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         `<text x="${p.cx}" y="${labelY0 + i * lineHeight}" text-anchor="middle" font-size="12" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
-      <g class="proc-node" data-stapnr="${s.stapNr}">
+      <g class="proc-node${padCls(s.stapNr)}" data-stapnr="${s.stapNr}">
         ${sel}
         <circle cx="${p.cx}" cy="${p.cy}" r="${r}" fill="${s.stapType === 'einde' ? '#008D4D' : '#FFFFFF'}" stroke="${style.accent}" stroke-width="${s.stapType === 'einde' ? 3 : 2.5}"/>
         ${nameLinesHtml}
@@ -1402,7 +1433,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         `<text x="${p.cx}" y="${labelY0 + i * lineHeight}" text-anchor="middle" font-size="12" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
-      <g class="proc-node" data-stapnr="${s.stapNr}">
+      <g class="proc-node${padCls(s.stapNr)}" data-stapnr="${s.stapNr}">
         ${sel}
         <polygon points="${pts}" fill="${style.tint}" stroke="${style.accent}" stroke-width="2"/>
         ${plus}
@@ -1417,7 +1448,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         `<text x="${p.cx}" y="${p.cy - (nameLines.length - 1) * lineHeight / 2 + i * lineHeight + 9}" text-anchor="middle" font-size="12" font-weight="700" fill="${style.text}">${escHtml(line)}</text>`
       ).join('');
       boxes += `
-      <g class="proc-node" data-stapnr="${s.stapNr}"${gotoAttr}>
+      <g class="proc-node${padCls(s.stapNr)}" data-stapnr="${s.stapNr}"${gotoAttr}>
         ${sel}
         <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="3" fill="${style.tint}" stroke="${style.accent}" stroke-width="1.4" stroke-dasharray="5 4"/>
         <text x="${p.cx}" y="${y + 13}" text-anchor="middle" font-size="9" font-weight="700" letter-spacing=".6" fill="${style.text}">VERVOLGPROCES →</text>
@@ -1434,7 +1465,7 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
         `<text x="${x + 34}" y="${textY0 + i * lineHeight}" font-size="12.5" font-weight="700" fill="#002E56">${escHtml(line)}</text>`
       ).join('');
       boxes += `
-      <g class="proc-node" data-stapnr="${s.stapNr}">
+      <g class="proc-node${padCls(s.stapNr)}" data-stapnr="${s.stapNr}">
         ${sel}
         <rect x="${x}" y="${y}" width="${boxW}" height="${cardH}" rx="3" fill="${s.stapType === 'actie' ? '#F2F5F7' : '#FFFFFF'}" stroke="${isSelected ? '#005496' : '#C3CDD7'}" stroke-width="${isSelected ? 1.6 : 1}"/>
         <rect x="${x}" y="${y}" width="5" height="${cardH}" fill="${style.accent}"/>
@@ -1448,6 +1479,9 @@ function renderProcessFlowSVG(steps, layerMap, lanes, selectedStapNr) {
     <defs>
       <marker id="proc-arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
         <path d="M0,0 L9,4.5 L0,9 Z" fill="#7F93AB"/>
+      </marker>
+      <marker id="proc-arrowhead-pad" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 Z" fill="#005496"/>
       </marker>
       <marker id="proc-arrowhead-terug" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
         <path d="M0,0 L9,4.5 L0,9 Z" fill="#B41E8E"/>
@@ -1534,7 +1568,7 @@ function renderNormFlow(p, selectedStapNr) {
 
   const layerMap = computeStepLayers(p.steps);
   const lanes = computeLaneOrder(p.steps, layerMap);
-  wrap.innerHTML = `<div class="flow-scroll" id="flowScroll">${renderProcessFlowSVG(p.steps, layerMap, lanes, selectedStapNr)}</div>`;
+  wrap.innerHTML = `<div class="flow-scroll" id="flowScroll">${renderProcessFlowSVG(p.steps, layerMap, lanes, selectedStapNr, procPad ? procPad.perProc.get(p.id) : null)}</div>`;
 
   if (procZoom === 'fit') {
     const svg = document.getElementById('procFlowSvg');
@@ -1555,7 +1589,128 @@ function renderNormFlow(p, selectedStapNr) {
    view-processen/switchMainTab-laag erboven, die raken we hier niet
    aan. Terug klikken bewaart de zoek/filterstand van de tegelpagina.
    ==================================================================== */
-function openProcFullscreen(id) {
+/* ====================================================================
+   PROCESPAD — een definitie kan een stuk proces aanwijzen
+   ("Melding → Besluit Wmo"). We zoeken alle routes van begin naar eind,
+   ook over vervolgproces-kaders heen, en laten die oplichten.
+   ==================================================================== */
+let procPad = null; // { term, tekst, perProc: Map(procId → {nodes, edges}) }
+
+function zoekStappen(deel) {
+  // "Procesnaam: Stapnaam" of alleen "Stapnaam"
+  const i = deel.lastIndexOf(':');
+  const procNaam = i > 0 ? deel.slice(0, i).trim().toLowerCase() : '';
+  const stap = (i > 0 ? deel.slice(i + 1) : deel).trim().toLowerCase();
+  const uit = [];
+  for (const p of procEntries) {
+    if (procNaam && p.naam.toLowerCase() !== procNaam && p.id.toLowerCase() !== procNaam) continue;
+    for (const s of p.steps) if (s.stapNaam.trim().toLowerCase() === stap) uit.push(`${p.id}#${s.stapNr}`);
+  }
+  return uit;
+}
+
+function berekenProcespad(tekst) {
+  const delen = String(tekst || '').split(/→|->/).map(s => s.trim()).filter(Boolean);
+  if (delen.length < 1 || delen.length > 2) return null;
+  // Eén stap ("Besluit Wmo"): alleen die stap licht op, in elk proces
+  // waar hij voorkomt (of alleen in het genoemde proces).
+  if (delen.length === 1) {
+    const losse = zoekStappen(delen[0]);
+    if (!losse.length) return null;
+    const perProc = new Map();
+    for (const k of losse) {
+      const [pid, nr] = k.split('#');
+      if (!perProc.has(pid)) perProc.set(pid, { nodes: new Set(), edges: new Set() });
+      perProc.get(pid).nodes.add(Number(nr));
+    }
+    return perProc;
+  }
+  const starts = zoekStappen(delen[0]), eindes = zoekStappen(delen[1]);
+  if (!starts.length || !eindes.length) return null;
+
+  // Graaf over alle processen. Binnen een proces alleen voorwaartse pijlen
+  // (terugkoppelingen tellen niet mee). Een vervolgproces-kader verbindt
+  // met de start van het andere proces, maar alleen "vooruit": niet terug
+  // naar een proces dat eerder in de keten zit.
+  const diepte = new Map();
+  const startProc = new Set(starts.map(k => k.split('#')[0]));
+  const rij = [...startProc]; rij.forEach(id => diepte.set(id, 0));
+  while (rij.length) {
+    const id = rij.shift(), p = procEntries.find(x => x.id === id); if (!p) continue;
+    for (const s of p.steps) {
+      const doel = s.stapType === 'subproces' && s.stapVerwijstNaarProces;
+      if (doel && !diepte.has(doel)) { diepte.set(doel, diepte.get(id) + 1); rij.push(doel); }
+    }
+  }
+  const volgende = new Map(), vorige = new Map();
+  const verbind = (a, b) => {
+    if (!volgende.has(a)) volgende.set(a, []); volgende.get(a).push(b);
+    if (!vorige.has(b)) vorige.set(b, []); vorige.get(b).push(a);
+  };
+  for (const p of procEntries) {
+    const lagen = computeStepLayers(p.steps);
+    const inkomend = new Set(p.steps.flatMap(s => s.volgendeStap));
+    for (const s of p.steps) {
+      for (const n of s.volgendeStap) if (lagen.get(n) > lagen.get(s.stapNr)) verbind(`${p.id}#${s.stapNr}`, `${p.id}#${n}`);
+      const doel = s.stapType === 'subproces' && s.stapVerwijstNaarProces;
+      const q = doel && procEntries.find(x => x.id === doel);
+      if (q && diepte.has(p.id) && diepte.has(doel) && diepte.get(doel) > diepte.get(p.id)) {
+        q.steps.filter(t => t.stapType === 'start' || !q.steps.some(u => u.volgendeStap.includes(t.stapNr)))
+          .forEach(t => verbind(`${p.id}#${s.stapNr}`, `${q.id}#${t.stapNr}`));
+      }
+    }
+  }
+  const bereik = (van, buren) => {
+    const gezien = new Set(van), rij = [...van];
+    while (rij.length) for (const n of (buren.get(rij.shift()) || [])) if (!gezien.has(n)) { gezien.add(n); rij.push(n); }
+    return gezien;
+  };
+  const vooruit = bereik(starts, volgende), terug = bereik(eindes, vorige);
+  const opPad = new Set([...vooruit].filter(k => terug.has(k)));
+  if (!opPad.size) return null;
+
+  const perProc = new Map();
+  for (const k of opPad) {
+    const [pid, nr] = k.split('#');
+    if (!perProc.has(pid)) perProc.set(pid, { nodes: new Set(), edges: new Set() });
+    perProc.get(pid).nodes.add(Number(nr));
+  }
+  for (const [a, lijst] of volgende) for (const b of lijst) {
+    const [pa, na] = a.split('#'), [pb, nb] = b.split('#');
+    if (pa === pb && opPad.has(a) && opPad.has(b)) perProc.get(pa).edges.add(`${na}>${nb}`);
+  }
+  // Volgorde van de processen: zoals ze in de keten voorkomen.
+  return new Map([...perProc].sort((x, y) => (diepte.get(x[0]) ?? 0) - (diepte.get(y[0]) ?? 0)));
+}
+
+function toonProcespad(defId, procId) {
+  const e = entries.find(x => x.id === defId); if (!e) return;
+  const perProc = berekenProcespad(e.procespad); if (!perProc) return;
+  procPad = { term: e.term, tekst: e.procespad, perProc };
+  switchMainTab('processen');
+  openProcFullscreen(procId || perProc.keys().next().value, true);
+}
+
+function wisProcespad() {
+  procPad = null;
+  const p = procEntries.find(x => x.id === currentProcId);
+  if (p) { renderNormFlow(p, null); padBalk(p); }
+}
+
+function padBalk(p) {
+  const balk = document.getElementById('procPadBalk');
+  const deel = procPad && procPad.perProc.get(p.id);
+  if (!deel) { balk.style.display = 'none'; balk.innerHTML = ''; return; }
+  const andere = [...procPad.perProc.keys()].filter(id => id !== p.id)
+    .map(id => procEntries.find(x => x.id === id)).filter(Boolean);
+  balk.innerHTML = `<span class="pad-label">${/→|->/.test(procPad.tekst) ? 'Procespad' : 'Processtap'} van <b>${escHtml(procPad.term)}</b>: ${escHtml(procPad.tekst)}</span>
+    ${andere.length ? `<span class="pad-ook">${/→|->/.test(procPad.tekst) ? 'Loopt ook door in' : 'Komt ook voor in'}: ${andere.map(q => `<button type="button" class="pad-link" data-pad-proc="${escHtml(q.id)}">${escHtml(q.naam)}</button>`).join('')}</span>` : ''}
+    <button type="button" class="pad-wis" data-pad-wis>Toon hele proces ×</button>`;
+  balk.style.display = '';
+}
+
+function openProcFullscreen(id, houdPad) {
+  if (!houdPad && procPad && !procPad.perProc.has(id)) procPad = null;
   currentProcId = id;
   const p = procEntries.find(x => x.id === id);
   if (!p) return;
@@ -1578,6 +1733,10 @@ function openProcFullscreen(id) {
     procZoom = 'fit';
     renderNormFlow(p, null);
     legend.innerHTML = NORMAAL_LEGEND;
+    padBalk(p);
+    // Valt de route buiten beeld (lange plaat), schuif er dan naartoe.
+    const eerste = document.querySelector('#procFlowSvg .pad-aan');
+    if (eerste) eerste.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
 }
 
@@ -1873,6 +2032,8 @@ function initInteractions() {
   // Klik op een D-nummer in een definitie: open die definitie (filters
   // en zoekterm worden leeggemaakt, zodat hij zeker in de lijst staat).
   document.getElementById('detailPanel').addEventListener('click', ev => {
+    const padKnop = ev.target.closest('[data-pad-def]');
+    if (padKnop) { toonProcespad(padKnop.dataset.padDef, padKnop.dataset.padProc); return; }
     const ref = ev.target.closest('[data-defref]');
     if (ref) { ev.preventDefault(); openDefinitieFromChip(ref.dataset.defref); }
   });
@@ -1880,7 +2041,7 @@ function initInteractions() {
   byRow('dashTableBody', selectDashEntry);
   document.getElementById('procList').addEventListener('click', ev => {
     const tile = ev.target.closest('[data-id]');
-    if (tile) openProcFullscreen(tile.dataset.id);
+    if (tile) { procPad = null; openProcFullscreen(tile.dataset.id); }
   });
   // Eén gedelegeerde listener op de hele fullscreen-view: die dekt zowel
   // de navbalk (terug-knop, zoomknoppen — die zitten buiten #procFlowWrap
@@ -1890,6 +2051,9 @@ function initInteractions() {
   document.getElementById('procFullscreenView').addEventListener('click', ev => {
     if (ev.target.closest('#procBackBtn')) { closeProcFullscreen(); return; }
     if (ev.target.closest('#procStepPanelClose')) { closeProcStepPanel(); return; }
+    if (ev.target.closest('[data-pad-wis]')) { wisProcespad(); return; }
+    const padLink = ev.target.closest('[data-pad-proc]');
+    if (padLink) { openProcFullscreen(padLink.dataset.padProc, true); return; }
     const zoomBtn = ev.target.closest('[data-zoom]');
     if (zoomBtn) { setProcZoom(zoomBtn.dataset.zoom); return; }
     // Vervolgproces-kader (subproces-type) met een geldige verwijzing:
@@ -1899,7 +2063,7 @@ function initInteractions() {
       const targetId = gotoBox.dataset.gotoProc;
       if (procEntries.some(pr => pr.id === targetId)) {
         renderProcList();
-        openProcFullscreen(targetId);
+        openProcFullscreen(targetId, true);
       }
       return;
     }
