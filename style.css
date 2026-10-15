@@ -949,3 +949,18 @@ body[data-tab="home"] .lijncirkel-top{display:block;}
 .defref-chip{font:inherit;display:inline-flex;font-size:.72rem;font-weight:700;color:#005496;background:#fff;border:1px solid #9DBEDD;border-radius:3px;padding:3px 9px;cursor:pointer;text-align:left;}
 .defref-chip:hover{background:#E3ECF5;}
 .defref:focus-visible,.defref-chip:focus-visible{outline:2px solid #005496;outline-offset:2px;}
+
+/* Definities onder een dashboard (in het dashboard-venster) */
+.dash-defs{display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:8px;overflow:hidden;}
+.dash-def{display:flex;align-items:center;gap:10px;width:100%;font:inherit;text-align:left;background:#fff;border:0;border-bottom:1px solid var(--bd);padding:9px 12px;cursor:pointer;color:var(--n);}
+.dash-def:last-child{border-bottom:0;}
+.dash-def:hover{background:var(--markering,#E3ECF5);}
+.dash-def:focus-visible{outline:2px solid #005496;outline-offset:-2px;}
+.dash-def-id{font-size:.7rem;font-weight:700;color:var(--sub);min-width:44px;font-variant-numeric:tabular-nums;}
+.dash-def-term{flex:1;font-size:.82rem;font-weight:700;color:var(--s);}
+.dash-def-pijl{color:var(--bd);flex-shrink:0;}
+.dash-def:hover .dash-def-pijl{color:var(--s);}
+.dash-def-onbekend{cursor:default;}
+.dash-def-onbekend .dash-def-term{color:#8E1770;font-weight:400;}
+.dash-defs .dash-nolink{padding:10px 12px;}
+.dash-modal-body .dash-defs:empty{display:none;}
