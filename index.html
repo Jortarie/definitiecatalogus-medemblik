@@ -45,13 +45,13 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="2.3"></circle><path d="M6.5 2.4v1.7M6.5 9.4v1.7M2.4 6.5h1.7M9.4 6.5h1.7M3.6 3.6l1.2 1.2M8.2 8.2l1.2 1.2M9.4 3.6L8.2 4.8M4.8 8.2L3.6 9.4"></path><path d="M11.5 6.5H16a3.5 3.5 0 0 1 0 7H9a3.5 3.5 0 0 0-3.5 3.5"></path><circle cx="17.5" cy="17.5" r="3.7"></circle><path d="M15.9 17.6l1.2 1.2 2.1-2.4"></path></svg>
       Processen
     </button>
-    <button class="hdr-nav-btn" id="navDatavelden" onclick="switchMainTab('datavelden')">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-      Datavelden
-    </button>
     <button class="hdr-nav-btn" id="navDashboards" onclick="switchMainTab('dashboards')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="13.5" rx="2"></rect><path d="M12 17v3.5M8 20.5h8"></path><path d="M6.5 13.5v-3M10 13.5V7.5M13.5 13.5V10M17 13.5V6.5"></path></svg>
       Dashboards
+    </button>
+    <button class="hdr-nav-btn" id="navDatavelden" onclick="switchMainTab('datavelden')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+      Datavelden
     </button>
   </div>
 
@@ -266,20 +266,7 @@
         <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </div>
 
-      <div class="home-tile" data-home-tile="datavelden" style="--tile-c:#005496;">
-        <div class="home-tile-num" id="homeCountDatavelden">—</div>
-        <div class="home-tile-body">
-          <div class="home-tile-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-            Datavelden
-          </div>
-          <div class="home-tile-desc">De onderliggende databronnen, per tabel en kolom.</div>
-          <div class="home-tile-breakdown" id="homeBreakdownDatavelden"></div>
-        </div>
-        <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
-      </div>
-
-      <div class="home-tile" data-home-tile="dashboards" style="--tile-c:#008D4D;">
+      <div class="home-tile" data-home-tile="dashboards" style="--tile-c:#005496;">
         <div class="home-tile-num" id="homeCountDashboards">—</div>
         <div class="home-tile-body">
           <div class="home-tile-title">
@@ -288,6 +275,19 @@
           </div>
           <div class="home-tile-desc">Bestaande rapportages die deze data al tonen.</div>
           <div class="home-tile-breakdown" id="homeBreakdownDashboards"></div>
+        </div>
+        <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </div>
+
+      <div class="home-tile" data-home-tile="datavelden" style="--tile-c:#008D4D;">
+        <div class="home-tile-num" id="homeCountDatavelden">—</div>
+        <div class="home-tile-body">
+          <div class="home-tile-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+            Datavelden
+          </div>
+          <div class="home-tile-desc">De onderliggende databronnen, per tabel en kolom.</div>
+          <div class="home-tile-breakdown" id="homeBreakdownDatavelden"></div>
         </div>
         <svg class="home-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
       </div>

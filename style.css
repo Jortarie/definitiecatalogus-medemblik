@@ -990,3 +990,9 @@ body[data-tab="home"] .lijncirkel-top{display:block;}
   #view-definities .detail-term{font-size:1.75rem;}
   #view-definities .detail-text{font-size:1.05rem;}
 }
+
+/* Dashboards: type (intern/extern) als gewone tekst, geen label met bolletje */
+.dash-badge,.dash-badge.intern,.dash-badge.extern{background:none !important;border:0 !important;padding:0;border-radius:0;font-size:inherit;font-weight:400;color:var(--sub);}
+.dash-badge::before{display:none;}
+.dash-modal-hdr .dash-badge{font-size:.78rem;}
+.dash-table .dash-badge,.home-result-item .dash-badge{font-size:.7rem;}
