@@ -253,9 +253,12 @@ function mapDashboardsRows(records) {
       loc: r.Locatie || '', team: schoon(r.team), link: r.link || '', updated: r.updated || '',
       // Optionele kolom "Begrippen" (;-gescheiden D-ids, bijv. "D-001;D-014"):
       // welke definities dit dashboard al toont.
-      // Mag een D-nummer zijn ("D-003", ook "D-003 — Uitstroommoment") of
-      // de exacte term; scheiden met ; , of een nieuwe regel.
-      dekt: (r.Begrippen || '').split(/[;,\n]/).map(s => s.trim()).filter(Boolean),
+      // Namen van definities, zoals een Google Sheets-keuzemenu met
+      // meerdere selecties ze opslaat ("Wachttijd, Caseload"). Ook ; of
+      // een nieuwe regel als scheiding, en D-nummers, werken. Het opdelen
+      // gebeurt pas bij het tonen (zie splitBegrippen), als de definities
+      // geladen zijn — zo breekt een term mét komma niet in stukken.
+      dekt: String(r.Begrippen || '').trim(),
     });
   }
   return { rows, rowIssues };
@@ -871,6 +874,28 @@ function selectDashEntry(id) {
   openDashModal(d);
 }
 
+/* Deelt de kolom "Begrippen" op in losse definitienamen. Scheiding: komma
+   (zo slaat een Google Sheets-keuzemenu met meerdere selecties het op),
+   puntkomma of nieuwe regel. Stukken tussen komma's worden weer aan
+   elkaar gezet als ze samen een bestaande term vormen, zodat een term
+   met een komma erin heel blijft. */
+function splitBegrippen(tekst) {
+  const termen = new Set(entries.map(e => e.term.toLowerCase()));
+  const uit = [];
+  for (const deel of String(tekst || '').split(/[;\n]/)) {
+    const stukken = deel.split(',').map(s => s.trim()).filter(Boolean);
+    for (let i = 0; i < stukken.length; i++) {
+      let kandidaat = stukken[i], j = i;
+      for (let k = i + 1; k < stukken.length && !termen.has(kandidaat.toLowerCase()); k++) {
+        const langer = stukken.slice(i, k + 1).join(', ');
+        if (termen.has(langer.toLowerCase())) { kandidaat = langer; j = k; break; }
+      }
+      uit.push(kandidaat); i = j;
+    }
+  }
+  return [...new Set(uit)];
+}
+
 function openDashModal(d) {
   document.getElementById('dashModalTitle').textContent = d.name;
   const badge = document.getElementById('dashModalTypeBadge');
@@ -889,7 +914,7 @@ function openDashModal(d) {
 
   // Definities die onder dit dashboard hangen (kolom "Begrippen" in het
   // Sheet). Elke regel opent de definitie op de Definities-tab.
-  const defs = (d.dekt || []).map(ref => {
+  const defs = splitBegrippen(d.dekt).map(ref => {
     const m = ref.match(/^D-\d+/i);
     const e = m ? entries.find(x => x.id.toUpperCase() === m[0].toUpperCase())
                 : entries.find(x => x.term.toLowerCase() === ref.toLowerCase());
@@ -900,15 +925,13 @@ function openDashModal(d) {
     `Definities in dit dashboard${defs.length ? ` (${defs.length})` : ''}`;
   lijst.innerHTML = defs.length
     ? defs.map(({ ref, e }) => e
-        ? `<button type="button" class="dash-def" data-defref="${escHtml(e.id)}">
-             <span class="dash-def-id">${escHtml(e.id)}</span>
+        ? `<button type="button" class="dash-def" data-defref="${escHtml(e.id)}" title="Open de definitie">
              <span class="dash-def-term">${escHtml(e.term)}</span>
-             ${statusBadgeHtml(e.status)}
              <svg class="dash-def-pijl" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
            </button>`
-        : `<div class="dash-def dash-def-onbekend"><span class="dash-def-id">?</span><span class="dash-def-term">${escHtml(ref)} — niet gevonden in de definities</span></div>`
+        : `<div class="dash-def dash-def-onbekend"><span class="dash-def-term">${escHtml(ref)} — niet gevonden in de definities</span></div>`
       ).join('')
-    : `<div class="dash-nolink">Nog geen definities gekoppeld. Vul in het Sheet bij dit dashboard de kolom "Begrippen" in, bijvoorbeeld: D-003; D-019.</div>`;
+    : `<div class="dash-nolink">Nog geen definities gekoppeld. Kies ze in het Sheet in de kolom "Begrippen" bij dit dashboard.</div>`;
 
   document.getElementById('dashModalOverlay').classList.add('open');
 }
