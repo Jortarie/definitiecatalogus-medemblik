@@ -253,7 +253,9 @@ function mapDashboardsRows(records) {
       loc: r.Locatie || '', team: schoon(r.team), link: r.link || '', updated: r.updated || '',
       // Optionele kolom "Begrippen" (;-gescheiden D-ids, bijv. "D-001;D-014"):
       // welke definities dit dashboard al toont.
-      dekt: (r.Begrippen || '').split(';').map(s => s.trim().toUpperCase()).filter(Boolean),
+      // Mag een D-nummer zijn ("D-003", ook "D-003 — Uitstroommoment") of
+      // de exacte term; scheiden met ; , of een nieuwe regel.
+      dekt: (r.Begrippen || '').split(/[;,\n]/).map(s => s.trim()).filter(Boolean),
     });
   }
   return { rows, rowIssues };
@@ -884,6 +886,29 @@ function openDashModal(d) {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
     Open dashboard
   </a>` : `<div class="dash-nolink">Geen link beschikbaar voor dit dashboard — vul de kolom "link" in het Sheet in.</div>`;
+
+  // Definities die onder dit dashboard hangen (kolom "Begrippen" in het
+  // Sheet). Elke regel opent de definitie op de Definities-tab.
+  const defs = (d.dekt || []).map(ref => {
+    const m = ref.match(/^D-\d+/i);
+    const e = m ? entries.find(x => x.id.toUpperCase() === m[0].toUpperCase())
+                : entries.find(x => x.term.toLowerCase() === ref.toLowerCase());
+    return { ref, e };
+  });
+  const lijst = document.getElementById('dashModalDefs');
+  document.getElementById('dashModalDefsLabel').textContent =
+    `Definities in dit dashboard${defs.length ? ` (${defs.length})` : ''}`;
+  lijst.innerHTML = defs.length
+    ? defs.map(({ ref, e }) => e
+        ? `<button type="button" class="dash-def" data-defref="${escHtml(e.id)}">
+             <span class="dash-def-id">${escHtml(e.id)}</span>
+             <span class="dash-def-term">${escHtml(e.term)}</span>
+             ${statusBadgeHtml(e.status)}
+             <svg class="dash-def-pijl" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+           </button>`
+        : `<div class="dash-def dash-def-onbekend"><span class="dash-def-id">?</span><span class="dash-def-term">${escHtml(ref)} — niet gevonden in de definities</span></div>`
+      ).join('')
+    : `<div class="dash-nolink">Nog geen definities gekoppeld. Vul in het Sheet bij dit dashboard de kolom "Begrippen" in, bijvoorbeeld: D-003; D-019.</div>`;
 
   document.getElementById('dashModalOverlay').classList.add('open');
 }
@@ -2170,6 +2195,12 @@ function initInteractions() {
     });
   };
   byRow('tableBody', selectEntry);
+  document.getElementById('dashModalDefs').addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-defref]');
+    if (!btn) return;
+    closeDashModal();
+    openDefinitieFromChip(btn.dataset.defref);
+  });
   // Klik op een D-nummer in een definitie: open die definitie (filters
   // en zoekterm worden leeggemaakt, zodat hij zeker in de lijst staat).
   document.getElementById('detailPanel').addEventListener('click', ev => {
