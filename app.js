@@ -65,10 +65,6 @@ const SHEET_URLS = {
   datavelden: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1189154651&single=true&output=csv',
   dashboards: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=1394577148&single=true&output=csv',
   processen: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=269674294&single=true&output=csv',
-  // Nieuw tabblad "processen_mc" — MensCentraal-processen (één rij per vraag).
-  // Publiceer het tabblad als CSV (Bestand → Delen → Publiceren op web) en
-  // plak hier de URL met de juiste gid. Leeg = tab wordt stil overgeslagen.
-  processen_mc: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRqtLb8sAkrRePaCRjZSMVrqvC_lB3CEkUJ6S1MnfIFdzH-L7ABkSNAPuOaglIzR3mMVgABiAoBjIej/pub?gid=182487918&single=true&output=csv',
 };
 
 /* ====================================================================
@@ -366,102 +362,6 @@ function mapProcessenRows(records) {
   return { rows, rowIssues };
 }
 
-/* MensCentraal-processen: het tabblad "processen_mc" heeft ÉÉN RIJ PER
-   VRAAG. Proces- en fase-informatie hoeft alleen op de EERSTE rij van
-   een fase ingevuld te worden; de parser neemt de laatst geziene waarde
-   mee naar volgende rijen (carry-forward). Zo kun je een MensCentraal-
-   export bijna 1-op-1 in het tabblad plakken en alleen de fase-rijen
-   aanvullen. Kolommen:
-     procId, procNaam, procTeam, procDesc,
-     faseNr, faseNaam, faseCategorie, faseOptioneel, faseVervolg,
-     vraag, vraagType
-   Optionele extra kolom:
-   - faseSpoor: label van een parallel pad (bijv. "PGB" of "Incidentele
-     maatwerkovereenkomst"). Opeenvolgende fases met een spoor-label
-     worden naast het reguliere pad getekend; fases met hetzelfde label
-     staan onder elkaar in één kolom, verschillende labels komen naast
-     elkaar. Leeg = gewoon in het hoofdpad.
-   - faseCategorie: toegang | toeleiden | besluitvorming | kwaliteit |
-     leveren | afsluiting  (bepaalt de kleur; onbekend → toegang + log)
-   - faseOptioneel: "ja" = gestippelde rand + optioneel-badge
-   - faseVervolg: ;-gescheiden labels van mogelijke vervolgpaden
-   - vraagType: datum | keuze | getal — of de ruwe MensCentraal-waarden
-     DATE / PROCESS_PROPERTY_OPTION / NUMBER. TEXT-rijen worden
-     automatisch overgeslagen (vrije tekst is niet analyseerbaar).   */
-const MC_CATEGORIES = ['toegang', 'toeleiden', 'besluitvorming', 'kwaliteit', 'leveren', 'afsluiting'];
-const MC_TYPE_MAP = { 'date': 'datum', 'process_property_option': 'keuze', 'boolean': 'keuze', 'number': 'getal', 'decimal': 'getal', 'datum': 'datum', 'keuze': 'keuze', 'getal': 'getal' };
-
-function mapMcProcessenRows(records) {
-  const rowIssues = [];
-  const byProc = new Map(); // procId -> proces-object
-  let curProcId = '', curFaseNr = null;
-
-  records.forEach((r, idx) => {
-    // Carry-forward: lege procId/faseNr = zelfde als de rij erboven.
-    const rowProcId = (r.procId || '').trim();
-    if (rowProcId) { curProcId = rowProcId; curFaseNr = null; }
-    if (!curProcId) { rowIssues.push(`MC-rij ${idx + 1} zonder procId (ook niet erboven), overgeslagen`); return; }
-
-    if (!byProc.has(curProcId)) {
-      byProc.set(curProcId, { id: curProcId, naam: curProcId, team: '', desc: '', type: 'menscentraal', fases: [] });
-    }
-    const proc = byProc.get(curProcId);
-    if ((r.procNaam || '').trim()) proc.naam = r.procNaam.trim();
-    if ((r.procTeam || '').trim()) proc.team = r.procTeam.trim();
-    if ((r.procDesc || '').trim()) proc.desc = decodeText(r.procDesc);
-
-    const faseNrRaw = (r.faseNr || '').trim();
-    if (faseNrRaw) {
-      const nr = parseInt(faseNrRaw, 10);
-      if (Number.isNaN(nr)) { rowIssues.push(`MC-rij ${idx + 1} (proces "${curProcId}"): faseNr "${faseNrRaw}" is geen getal, rij overgeslagen`); return; }
-      curFaseNr = nr;
-    }
-    if (curFaseNr === null) { rowIssues.push(`MC-rij ${idx + 1} (proces "${curProcId}") zonder faseNr (ook niet erboven), overgeslagen`); return; }
-
-    let fase = proc.fases.find(f => f.nr === curFaseNr);
-    if (!fase) {
-      fase = { nr: curFaseNr, naam: `Fase ${curFaseNr}`, cat: 'toegang', optioneel: false, spoor: '', vervolg: [], vragen: [] };
-      proc.fases.push(fase);
-    }
-    if ((r.faseNaam || '').trim()) fase.naam = r.faseNaam.trim();
-    if ((r.faseSpoor || '').trim()) fase.spoor = r.faseSpoor.trim();
-    const catRaw = (r.faseCategorie || '').trim().toLowerCase();
-    if (catRaw) {
-      if (MC_CATEGORIES.includes(catRaw)) fase.cat = catRaw;
-      else rowIssues.push(`Proces "${curProcId}" fase ${curFaseNr}: onbekende categorie "${catRaw}", gebruik 'toegang' als fallback.`);
-    }
-    if ((r.faseOptioneel || '').trim()) fase.optioneel = (r.faseOptioneel || '').trim().toLowerCase() === 'ja';
-    if ((r.faseVervolg || '').trim()) fase.vervolg = r.faseVervolg.split(';').map(s => s.trim()).filter(Boolean);
-
-    const vraag = (r.vraag || '').trim();
-    if (!vraag) return; // fase-rij zonder vraag is prima (bijv. "Start zaak")
-    const typeRaw = (r.vraagType || '').trim().toLowerCase();
-    if (typeRaw === 'text' || typeRaw === 'tekst') return; // vrije tekst: niet analyseerbaar, stil overslaan
-    const vtype = MC_TYPE_MAP[typeRaw] || 'keuze';
-    if (typeRaw && !MC_TYPE_MAP[typeRaw]) rowIssues.push(`Proces "${curProcId}" fase ${curFaseNr}: onbekend vraagType "${typeRaw}" bij "${vraag}", gebruik 'keuze'.`);
-    fase.vragen.push({ naam: vraag, type: vtype });
-  });
-
-  const rows = [];
-  for (const proc of byProc.values()) {
-    if (proc.fases.length === 0) { rowIssues.push(`MC-proces "${proc.id}" heeft geen fases, overgeslagen`); continue; }
-    proc.fases.sort((a, b) => a.nr - b.nr);
-    rows.push(proc);
-  }
-  return { rows, rowIssues };
-}
-
-/* ====================================================================
-   HARDCODED PROCESSEN
-   Naast (of zonder) een Sheets-koppeling kunnen hier processen direct
-   in de code worden vastgelegd — handig voor een proces dat nog niet
-   in Sheets staat, of dat je liever niet door iedereen wilt laten
-   bewerken. Zelfde vorm als een proces dat uit Sheets komt: een
-   object met id/naam/team/desc/steps. Bij een procId-botsing met een
-   Sheets-rij wint de Sheets-versie (zie samenvoegLogica in
-   loadAllData) en wordt het hardcoded duplicaat overgeslagen + gelogd.
-   Laat de array leeg ([]) als je geen hardcoded processen wilt.
-   ==================================================================== */
 const HARDCODED_PROCESSEN = [
   // Voorbeeld — verwijder of vervang dit door een eigen proces:
   // {
@@ -483,32 +383,16 @@ async function loadAllData() {
   if (btn) { btn.disabled = true; btn.style.opacity = '.55'; btn.innerHTML = 'Laden…'; }
 
   issues.length = 0;
-  const [defRes, dvRes, dashRes, procRes, mcRes] = await Promise.all([
+  const [defRes, dvRes, dashRes, procRes] = await Promise.all([
     fetchAndMap(SHEET_URLS.definities, mapDefinitiesRows),
     fetchAndMap(SHEET_URLS.datavelden, mapDataveldenRows),
     fetchAndMap(SHEET_URLS.dashboards, mapDashboardsRows),
     fetchAndMap(SHEET_URLS.processen, mapProcessenRows),
-    // mc-tab is optioneel: geen URL geconfigureerd = stil overslaan.
-    SHEET_URLS.processen_mc
-      ? fetchAndMap(SHEET_URLS.processen_mc, mapMcProcessenRows)
-      : Promise.resolve({ rows: [], rowIssues: [] }),
   ]);
   entries = defRes.rows;
   dvEntries = dvRes.rows;
   dashEntries = dashRes.rows;
   procEntries = procRes.rows;
-
-  // MensCentraal-processen toevoegen; bij een procId-botsing wint de
-  // gewone processen-tab (zelfde principe als bij hardcoded).
-  const normProcIds = new Set(procEntries.map(p => p.id));
-  for (const mc of mcRes.rows) {
-    if (normProcIds.has(mc.id)) {
-      issues.push({ dataset: 'processen', message: `MC-proces "${mc.id}" overgeslagen — id bestaat al in het gewone processen-tabblad.` });
-      continue;
-    }
-    procEntries.push(mc);
-  }
-  mcRes.rowIssues.forEach(m => issues.push({ dataset: 'processen_mc', message: m }));
 
   // Veld1-Veld8 (DF-ids) omzetten naar volledige chip-info, nu beide
   // datasets geladen zijn. Issues hierbij gaan in dezelfde issues-array
@@ -956,10 +840,8 @@ document.addEventListener('keydown', (e) => {
 function renderProcList() {
   const q = (document.getElementById('procSearch').value || '').toLowerCase();
   const ft = document.getElementById('procFilterTeam').value;
-  const ftype = document.getElementById('procFilterType').value;
 
   const filtered = procEntries.filter(p => {
-    if (ftype && (p.type || 'normaal') !== ftype) return false;
     if (ft && p.team !== ft) return false;
     if (q && !(`${p.naam} ${p.team} ${p.desc}`.toLowerCase().includes(q))) return false;
     return true;
@@ -976,19 +858,13 @@ function renderProcList() {
   }
 
   list.innerHTML = filtered.map(p => {
-    const isMc = p.type === 'menscentraal';
-    let countLabel;
-    if (isMc) {
-      countLabel = `${p.fases.length} fases · ${p.fases.reduce((n, f) => n + f.vragen.length, 0)} vragen`;
-    } else {
-      // Rijbanen tellen we hetzelfde als bij het tekenen van het diagram
-      // (computeStepLayers/computeLaneOrder), zodat de tegel exact
-      // aansluit op wat je straks in de fullscreen-weergave ziet.
-      const layerMap = computeStepLayers(p.steps);
-      const laneCount = computeLaneOrder(p.steps, layerMap).length;
-      countLabel = `${p.steps.length} stappen · ${laneCount} rijba${laneCount === 1 ? 'an' : 'nen'}`;
-    }
-    const typeBadge = isMc ? `<span class="proc-type-badge mc">MensCentraal</span>` : '';
+    // Rijbanen tellen we hetzelfde als bij het tekenen van het diagram
+    // (computeStepLayers/computeLaneOrder), zodat de tegel exact
+    // aansluit op wat je straks in de fullscreen-weergave ziet.
+    const layerMap = computeStepLayers(p.steps);
+    const laneCount = computeLaneOrder(p.steps, layerMap).length;
+    const countLabel = `${p.steps.length} stappen · ${laneCount} rijba${laneCount === 1 ? 'an' : 'nen'}`;
+    const typeBadge = '';
     const sel = p.id === currentProcId ? ' proc-tile-active' : '';
     return `
     <div class="proc-tile${sel}" data-id="${escHtml(p.id)}">
@@ -1596,230 +1472,6 @@ const NORMAAL_LEGEND = `
   <span><i style="background:#008D4D;border-radius:50%;"></i>Einde</span>
   <span><i style="background:none;border-top:2px dashed #B41E8E;border-radius:0;width:16px;height:0;"></i>Terug naar eerdere stap</span>`;
 
-/* Kleuren per fase-categorie (MensCentraal) — zelfde huisstijlpalet
-   als de rest van de app. 'header' is de donkere fase-balk (witte
-   tekst), 'tag'/'text' voor lichte accenten. */
-const MC_CAT_STYLE = {
-  toegang:        { header: '#005496', label: 'Toegang' },
-  toeleiden:      { header: '#1D9E75', label: 'Toeleiden / regie' },
-  besluitvorming: { header: '#F26722', label: 'Besluitvorming' },
-  kwaliteit:      { header: '#7F77DD', label: 'Kwaliteit / controle' },
-  leveren:        { header: '#0C8FA0', label: 'Leveren / administratie' },
-  afsluiting:     { header: '#4A6180', label: 'Afsluiting' },
-};
-const MC_VRAAGTYPE_STYLE = {
-  datum: { cls: 'mc-tag-datum', label: 'Datumveld' },
-  keuze: { cls: 'mc-tag-keuze', label: 'Keuzeveld' },
-  getal: { cls: 'mc-tag-getal', label: 'Getalveld' },
-};
-let mcSelectedFase = null; // geselecteerde fase (nr) — detail verschijnt onder de tijdlijn
-let mcSearchQuery = '';        // zoekterm binnen het geopende MC-proces
-
-function mcLegendHtml(proc) {
-  const usedCats = [...new Set(proc.fases.map(f => f.cat))];
-  const catPart = usedCats.map(c => {
-    const st = MC_CAT_STYLE[c] || MC_CAT_STYLE.toegang;
-    return `<span><i style="background:${st.header};"></i>${escHtml(st.label)}</span>`;
-  }).join('');
-  const typePart = Object.values(MC_VRAAGTYPE_STYLE).map(t =>
-    `<span><i class="${t.cls}" style="border-radius:3px;"></i>${t.label}</span>`).join('');
-  return catPart + `<span style="width:1px;background:var(--bd);align-self:stretch;"></span>` + typePart;
-}
-
-function mcVraagTagHtml(v, q) {
-  const st = MC_VRAAGTYPE_STYLE[v.type] || MC_VRAAGTYPE_STYLE.keuze;
-  return `<span class="mc-tag ${st.cls}">${hlHtml(v.naam, q)}</span>`;
-}
-
-/* ── Secties bouwen: opeenvolgende fases met een spoor-label vormen
-   samen één parallel blok; daarbinnen wordt per spoor-label een kolom
-   gemaakt. Fases zonder spoor zijn gewone hoofdpad-stappen. ───────── */
-function buildMcSections(fases) {
-  const sections = [];
-  let cur = null;
-  for (const f of fases) {
-    if (f.spoor) {
-      if (!cur || cur.type !== 'parallel') { cur = { type: 'parallel', lanes: new Map() }; sections.push(cur); }
-      if (!cur.lanes.has(f.spoor)) cur.lanes.set(f.spoor, []);
-      cur.lanes.get(f.spoor).push(f);
-    } else {
-      if (!cur || cur.type !== 'seq') { cur = { type: 'seq', fases: [] }; sections.push(cur); }
-      cur.fases.push(f);
-    }
-  }
-  return sections;
-}
-
-/* Vaste toolbar (jumpbalk + zoekveld + alles-knoppen): wordt maar één
-   keer gerenderd bij het openen, zodat het zoekveld focus houdt terwijl
-   de flow eronder opnieuw getekend wordt. */
-function mcToolbarHtml(proc) {
-  const pills = proc.fases.map(f => {
-    const st = MC_CAT_STYLE[f.cat] || MC_CAT_STYLE.toegang;
-    return `<span class="mc-jump-pill" data-mcjump="${f.nr}" title="${escHtml(f.naam)} — ${f.vragen.length} vragen${f.spoor ? ' · pad: ' + escHtml(f.spoor) : ''}${f.optioneel ? ' (optioneel)' : ''}">
-      <i style="background:${st.header};"></i>${f.nr}. ${escHtml(f.naam)}${f.optioneel ? ' *' : ''}
-    </span>`;
-  }).join('');
-  return `<div class="mc-toolbar">
-    <div class="mc-jumpbar">${pills}</div>
-    <div class="mc-toolbar-row2">
-      <div class="mc-search-wrap">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" id="mcSearchInput" placeholder="Zoek een vraag in dit proces…">
-        <span class="mc-search-count" id="mcSearchCount"></span>
-      </div>
-    </div>
-  </div>`;
-}
-
-/* Eén fase-kaart in de horizontale tijdlijn. Compact: gekleurde
-   categoriebalk, stapnummer, naam en vraagtelling. Klikken selecteert
-   de fase; de bijbehorende vragen verschijnen in het detailblok onder
-   de tijdlijn. Bij een actieve zoekterm dimmen fases zonder treffer. */
-function mcCardHtml(f, q) {
-  const st = MC_CAT_STYLE[f.cat] || MC_CAT_STYLE.toegang;
-  const matched = q ? f.vragen.filter(v => v.naam.toLowerCase().includes(q)) : f.vragen;
-  const nameMatch = q && f.naam.toLowerCase().includes(q);
-  const hasMatch = !q || matched.length > 0 || nameMatch;
-  const sel = f.nr === mcSelectedFase;
-
-  const counts = {};
-  f.vragen.forEach(v => { counts[v.type] = (counts[v.type] || 0) + 1; });
-  const miniHtml = Object.entries(counts).map(([type, n]) => {
-    const ts = MC_VRAAGTYPE_STYLE[type] || MC_VRAAGTYPE_STYLE.keuze;
-    return `<span class="mc-mini ${ts.cls}" title="${n} ${ts.label.toLowerCase()}en">${n}</span>`;
-  }).join('');
-
-  const optStripe = f.optioneel
-    ? 'background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.09) 0 8px, transparent 8px 16px);'
-    : '';
-
-  return `
-    <div class="mc-card ${sel ? 'mc-card-sel' : ''} ${q && !hasMatch ? 'mc-fase-dim' : ''}"
-         id="mcfase-${f.nr}" data-mcfase="${f.nr}" style="--fase-c:${st.header};">
-      <div class="mc-card-hdr" style="background:${st.header};${optStripe}">
-        <span class="mc-card-cat">${escHtml(st.label)}</span>
-        <span class="mc-card-nr">${f.nr}</span>
-      </div>
-      <div class="mc-card-naam">${q ? hlHtml(f.naam, q) : escHtml(f.naam)}</div>
-      <div class="mc-card-meta">
-        ${miniHtml}
-        <span class="mc-card-count">${q ? `${matched.length}/${f.vragen.length}` : f.vragen.length} vragen</span>
-        ${f.optioneel ? '<span class="mc-card-opt">optioneel</span>' : ''}
-      </div>
-    </div>`;
-}
-
-/* Detailblok onder de tijdlijn: de vragen (tags) en vervolgpaden van
-   de geselecteerde fase. Tijdens zoeken worden alleen treffers getoond. */
-function mcDetailHtml(proc, q) {
-  const f = proc.fases.find(x => x.nr === mcSelectedFase);
-  if (!f) return '';
-  const st = MC_CAT_STYLE[f.cat] || MC_CAT_STYLE.toegang;
-  const shown = q ? f.vragen.filter(v => v.naam.toLowerCase().includes(q)) : f.vragen;
-  const tagsHtml = f.vragen.length
-    ? `<div class="mc-tags">${shown.map(v => mcVraagTagHtml(v, q)).join('')}</div>`
-    : `<div class="mc-geen-vragen">Geen analyseerbare velden in deze fase</div>`;
-  const vervolgHtml = f.vervolg.length
-    ? `<div class="mc-paden">${f.vervolg.map(v => `<span class="mc-pad-pill">→ ${escHtml(v)}</span>`).join('')}</div>`
-    : '';
-  return `
-    <div class="mc-detail" style="border-top-color:${st.header};">
-      <div class="mc-detail-hdr">
-        <span class="mc-detail-dot" style="background:${st.header};"></span>
-        <span class="mc-detail-title">Stap ${f.nr} · ${escHtml(f.naam)}</span>
-        <span class="mc-detail-cat" style="color:${st.header};border-color:${st.header};">${escHtml(st.label)}</span>
-        ${f.optioneel ? '<span class="mc-card-opt">optioneel</span>' : ''}
-        ${q ? `<span class="mc-card-count">${shown.length} van ${f.vragen.length} vragen zichtbaar</span>` : ''}
-      </div>
-      ${tagsHtml}
-      ${vervolgHtml}
-    </div>`;
-}
-
-/* Horizontale tijdlijn: fases van links naar rechts, parallelle sporen
-   als rijen boven elkaar. Onder de tijdlijn het detailblok. */
-function renderMcFlowHtml(proc) {
-  const q = mcSearchQuery.trim().toLowerCase();
-  const sections = buildMcSections(proc.fases);
-  const conn = `<div class="mc-conn-h"><span class="mc-arr-h"></span></div>`;
-  const parts = [];
-
-  sections.forEach((sec, si) => {
-    if (si > 0) parts.push(conn);
-
-    if (sec.type === 'seq') {
-      sec.fases.forEach((f, i) => {
-        if (i > 0) parts.push(conn);
-        parts.push(mcCardHtml(f, q));
-      });
-      return;
-    }
-
-    // Parallel blok: rij per spoor, boven elkaar. Bij één spoor komt er
-    // een "regulier pad"-doorlooprij bij zodat zichtbaar blijft dat het
-    // hoofdpad gewoon doorloopt.
-    const lanes = [...sec.lanes.entries()];
-    const laneHtml = lanes.map(([label, fases]) => {
-      const inner = fases.map((f, i) => (i > 0 ? conn : '') + mcCardHtml(f, q)).join('');
-      return `<div class="mc-par-lane"><span class="mc-lane-tag">${escHtml(label)}</span>${inner}</div>`;
-    });
-    if (lanes.length === 1) {
-      laneHtml.unshift(`<div class="mc-par-lane mc-ghost-h">
-        <span class="mc-lane-tag">Regulier pad</span>
-        <span class="mc-ghost-line"></span><span>loopt direct door</span>
-      </div>`);
-    }
-    parts.push(`<div class="mc-par">${laneHtml.join('')}</div>`);
-  });
-
-  return `<div class="mc-track">${parts.join('')}</div>${mcDetailHtml(proc, q)}`;
-}
-
-function renderMcFlow(proc) {
-  const inner = document.getElementById('mcFlowInner');
-  if (!inner) return;
-
-  // Tijdens zoeken: als de geselecteerde fase geen treffer heeft,
-  // automatisch doorspringen naar de eerste fase mét treffer.
-  const q = mcSearchQuery.trim().toLowerCase();
-  if (q) {
-    const match = f => f.naam.toLowerCase().includes(q) || f.vragen.some(v => v.naam.toLowerCase().includes(q));
-    const sel = proc.fases.find(f => f.nr === mcSelectedFase);
-    if (!sel || !match(sel)) {
-      const first = proc.fases.find(match);
-      if (first) mcSelectedFase = first.nr;
-    }
-  }
-
-  inner.innerHTML = renderMcFlowHtml(proc);
-  const countEl = document.getElementById('mcSearchCount');
-  if (countEl) {
-    if (!q) { countEl.textContent = ''; }
-    else {
-      const n = proc.fases.reduce((acc, f) => acc + f.vragen.filter(v => v.naam.toLowerCase().includes(q)).length, 0);
-      countEl.textContent = `${n} treffer${n === 1 ? '' : 's'}`;
-    }
-  }
-}
-
-/* Fase selecteren: kaart markeren, detail tonen en de kaart in beeld
-   scrollen (ook gebruikt door de spring-navigatiebalk). */
-function selectMcFase(faseNr) {
-  const p = procEntries.find(x => x.id === currentProcId);
-  if (!p || p.type !== 'menscentraal') return;
-  mcSelectedFase = faseNr;
-  renderMcFlow(p);
-  const target = document.getElementById('mcfase-' + faseNr);
-  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-}
-
-function onMcSearchInput(value) {
-  const p = procEntries.find(x => x.id === currentProcId);
-  if (!p || p.type !== 'menscentraal') return;
-  mcSearchQuery = value || '';
-  renderMcFlow(p);
-}
 
 /* ── Zoom voor normale (SVG-)processen ──────────────────────────
    'fit' = passend in het paneel; een getal = vaste schaal. Bij het
@@ -1919,14 +1571,7 @@ function openProcFullscreen(id) {
   const flowWrap = document.getElementById('procFlowWrap');
   const legend = document.getElementById('procDetailLegend');
   const zoomTools = document.getElementById('procZoomTools');
-  if (p.type === 'menscentraal') {
-    zoomTools.innerHTML = ''; // MensCentraal heeft geen zoom, dat is een horizontale tijdlijn
-    mcSelectedFase = p.fases.length ? p.fases[0].nr : null;
-    mcSearchQuery = '';
-    flowWrap.innerHTML = `<div class="pf-scroll"><div class="mc-container">${mcToolbarHtml(p)}<div id="mcFlowInner"></div></div></div>`;
-    renderMcFlow(p);
-    legend.innerHTML = mcLegendHtml(p);
-  } else {
+  {
     zoomTools.innerHTML = pfZoomToolsHtml();
     // "Begin altijd bij passend scherm": elk proces opent op de
     // pas-in-beeld-zoom, nooit op de laatst onthouden stand.
@@ -1957,7 +1602,7 @@ function selectProcEntry(id) {
 
 function selectProcStep(stapNr) {
   const p = procEntries.find(x => x.id === currentProcId);
-  if (!p || p.type === 'menscentraal') return;
+  if (!p) return;
   const step = p.steps.find(s => s.stapNr === stapNr);
   if (!step) return;
 
@@ -2026,9 +1671,8 @@ function renderHomeTiles() {
   }
 
   if (procEntries.length) {
-    const mc = procEntries.filter(p => p.type === 'menscentraal').length;
-    document.getElementById('homeBreakdownProcessen').innerHTML =
-      chip(procEntries.length - mc, 'normaal') + (mc ? chip(mc, 'MensCentraal') : '');
+    const teams = new Set(procEntries.map(p => p.team).filter(Boolean)).size;
+    document.getElementById('homeBreakdownProcessen').innerHTML = chip(teams, teams === 1 ? 'team' : 'teams');
   }
 
   if (dvEntries.length) {
@@ -2100,7 +1744,6 @@ function renderHomeSearch() {
 function openProcFromHome(id) {
   document.getElementById('procSearch').value = '';
   document.getElementById('procFilterTeam').value = '';
-  document.getElementById('procFilterType').value = '';
   switchMainTab('processen');
   renderProcList();
   selectProcEntry(id);
@@ -2249,10 +1892,6 @@ function initInteractions() {
     if (ev.target.closest('#procStepPanelClose')) { closeProcStepPanel(); return; }
     const zoomBtn = ev.target.closest('[data-zoom]');
     if (zoomBtn) { setProcZoom(zoomBtn.dataset.zoom); return; }
-    const mcJump = ev.target.closest('[data-mcjump]');
-    if (mcJump) { selectMcFase(parseInt(mcJump.dataset.mcjump, 10)); return; }
-    const mcFase = ev.target.closest('[data-mcfase]');
-    if (mcFase) { selectMcFase(parseInt(mcFase.dataset.mcfase, 10)); return; }
     // Vervolgproces-kader (subproces-type) met een geldige verwijzing:
     // springt naar dat proces i.p.v. alleen de stap te selecteren.
     const gotoBox = ev.target.closest('[data-goto-proc]');
@@ -2266,11 +1905,6 @@ function initInteractions() {
     }
     const g = ev.target.closest('[data-stapnr]');
     if (g) selectProcStep(parseInt(g.dataset.stapnr, 10));
-  });
-  // Zoeken binnen een MensCentraal-proces: input-delegatie zodat de
-  // listener ook werkt nadat het canvas opnieuw is opgebouwd.
-  document.getElementById('procFullscreenView').addEventListener('input', ev => {
-    if (ev.target && ev.target.id === 'mcSearchInput') onMcSearchInput(ev.target.value);
   });
   document.getElementById('dFields').addEventListener('click', ev => {
     const chip = ev.target.closest('[data-dfid]');
