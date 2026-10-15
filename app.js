@@ -102,6 +102,7 @@ const STATUS_BADGE_CLASS = {
   'Vastgesteld': 'bdg-vastgesteld',
   'Definitie en context controleren': 'bdg-review',
   'Data velden zoeken': 'bdg-concept',
+  'Toewijzen': 'bdg-concept', // nog geen datavelden gekoppeld
   'Vervallen': 'bdg-vervallen',
 };
 
@@ -188,8 +189,10 @@ function mapDefinitiesRows(records) {
     rows.push({
       id, term: schoon(r.Term), def: decodeText(r.Definitie), ctx: decodeText(r.Businesscontext),
       fields: '', cat: schoon(r.Categorie), team: schoon(r.Team),
-      status: (r.Status || '').trim(), date: r.date || '', notes: decodeText(r.Notes),
-      veldIds, fieldChips: [], fieldsFull: decodeText(r['Velden en berekenignen']),
+      // Kolomnamen: zowel de oude (date/Notes) als de nieuwe Nederlandse
+      // (Datum vastgesteld/Opmerkingen) worden gelezen.
+      status: (r.Status || '').trim(), date: schoon(r['Datum vastgesteld'] || r.date), notes: decodeText(r.Opmerkingen || r.Notes),
+      veldIds, fieldChips: [], fieldsFull: decodeText(r['Velden en berekeningen'] || r['Velden en berekenignen']),
       source: r.Source || '', changelog: decodeJsonField(r.Wijzigingshistorie, []),
       image: (r.Afbeelding || '').trim(),
       // Optionele kolom "Uitsplitsingen" (;-gescheiden, bijv. "team;wet"):
