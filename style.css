@@ -996,3 +996,17 @@ body[data-tab="home"] .lijncirkel-top{display:block;}
 .dash-badge::before{display:none;}
 .dash-modal-hdr .dash-badge{font-size:.78rem;}
 .dash-table .dash-badge,.home-result-item .dash-badge{font-size:.7rem;}
+
+/* Procespad: route van een definitie in de procesplaat */
+.proc-node.pad-uit{opacity:.22;}
+.proc-node.pad-aan rect:not([fill="none"]),.proc-node.pad-aan polygon,.proc-node.pad-aan circle{stroke:#005496;stroke-width:2.4;}
+.pad-balk{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding:8px 18px;background:#E3ECF5;border-bottom:1px solid #9DBEDD;font-size:.78rem;color:var(--n);}
+.pad-balk b{font-weight:700;}
+.pad-ook{color:var(--sub);display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.pad-link{font:inherit;font-weight:700;color:#005496;background:#fff;border:1px solid #9DBEDD;border-radius:3px;padding:2px 8px;cursor:pointer;}
+.pad-wis{margin-left:auto;font:inherit;font-weight:700;color:#005496;background:none;border:0;cursor:pointer;text-decoration:underline;}
+.pad-knoppen{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.pad-knop{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.74rem;font-weight:700;color:#fff;background:#005496;border:0;border-radius:3px;padding:6px 11px;cursor:pointer;}
+.pad-knop:hover{background:#002E56;}
+.pad-knop:focus-visible,.pad-link:focus-visible,.pad-wis:focus-visible{outline:2px solid #005496;outline-offset:2px;}
+.pad-fout{font-size:.78rem;color:#8E1770;}
