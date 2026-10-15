@@ -964,3 +964,29 @@ body[data-tab="home"] .lijncirkel-top{display:block;}
 .dash-def-onbekend .dash-def-term{color:#8E1770;font-weight:400;}
 .dash-defs .dash-nolink{padding:10px 12px;}
 .dash-modal-body .dash-defs:empty{display:none;}
+
+/* ===================================================================
+   Definities: het definitievak (rechts) groeit mee met het scherm.
+   Laptop blijft zoals het was; op een monitor wordt het vak breder en
+   de tekst iets groter, zodat lange definities prettig leesbaar zijn.
+   .main is een grid, dus de breedte zit in grid-template-columns; de
+   oudere flex-/max-width-regels hierboven werkten daar niet op.
+   =================================================================== */
+#view-definities .detail-panel{flex:initial !important;max-width:none !important;min-width:0;}
+@media (max-width:1279px){
+  #view-definities .main{grid-template-columns:minmax(0,1fr) 400px;}
+}
+@media (min-width:1600px){
+  #view-definities .main{grid-template-columns:minmax(0,1fr) minmax(640px,45%);}
+  #view-definities .detail-scroll{padding:28px 36px;}
+  #view-definities .detail-term{font-size:1.5rem;}
+  #view-definities .detail-text{font-size:.95rem;line-height:1.7;}
+  #view-definities .section-label{font-size:.66rem;}
+  #view-definities .meta-val{font-size:.9rem;}
+}
+@media (min-width:2200px){
+  #view-definities .main{grid-template-columns:minmax(0,1fr) 50%;}
+  #view-definities .detail-scroll{padding:32px 48px;}
+  #view-definities .detail-term{font-size:1.75rem;}
+  #view-definities .detail-text{font-size:1.05rem;}
+}
