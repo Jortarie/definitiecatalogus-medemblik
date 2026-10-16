@@ -1010,3 +1010,158 @@ body[data-tab="home"] .lijncirkel-top{display:block;}
 .pad-knop:hover{background:#002E56;}
 .pad-knop:focus-visible,.pad-link:focus-visible,.pad-wis:focus-visible{outline:2px solid #005496;outline-offset:2px;}
 .pad-fout{font-size:.78rem;color:#8E1770;}
+
+/* ===================================================================
+   Scrollbalken: dun, licht en pas duidelijk bij aanwijzen.
+   Op Home scrollt de hele pagina, zodat de balk helemaal aan de
+   rechterrand staat in plaats van naast de inhoud.
+   =================================================================== */
+*{scrollbar-width:thin;scrollbar-color:rgba(0,46,86,.18) transparent;}
+*:hover{scrollbar-color:rgba(0,46,86,.38) transparent;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(0,46,86,.18);border-radius:6px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,46,86,.4);}
+::-webkit-scrollbar-corner{background:transparent;}
+#view-home{overflow-y:auto !important;overflow-x:hidden;}
+#view-home .home-content{flex:none;overflow:visible;min-height:auto;}
+
+/* ===================================================================
+   Versleepbare zijpanelen (Definities, Datavelden, processtap)
+   =================================================================== */
+.detail-panel,.dv-detail-panel{position:relative;}
+.paneel-greep{position:absolute;top:0;bottom:0;left:-5px;width:10px;cursor:col-resize;z-index:6;touch-action:none;}
+.paneel-greep::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;transition:background .15s;}
+.paneel-greep::after{content:"";position:absolute;top:50%;left:2px;width:6px;height:36px;margin-top:-18px;border-radius:4px;background:#fff;border:1px solid var(--bd);box-shadow:0 1px 3px rgba(0,46,86,.12);opacity:.9;transition:all .15s;}
+.paneel-greep:hover::before,.paneel-greep.actief::before,.paneel-greep:focus-visible::before{background:#005496;}
+.paneel-greep:hover::after,.paneel-greep.actief::after,.paneel-greep:focus-visible::after{background:#005496;border-color:#005496;}
+.paneel-greep:focus-visible{outline:none;}
+body.paneel-slepen{cursor:col-resize;user-select:none;}
+body.paneel-slepen iframe{pointer-events:none;}
+.pf-step-panel{transition:transform .18s ease;}
+@media (max-width:900px){.paneel-greep{display:none;}}
+
+/* ===================================================================
+   Kleur per onderdeel. Elk tabblad heeft een eigen huisstijlkleur, zodat
+   je altijd ziet waar je bent:
+   Definities = Saffierblauw, Processen = Lentegroen,
+   Dashboards = Nachtblauw, Datavelden = Logogroen.
+   Bewust alleen blauw en groen, de twee kleuren van het logo.
+   --sc is de kleur voor tekst en lijnen (donker genoeg voor contrast),
+   --sc-licht de zachte tint voor vlakken.
+   =================================================================== */
+body{--sc:#005496;--sc-fel:#005496;--sc-licht:#E8F0F8;--sc-zacht:#F3F7FB;}
+body[data-tab="processen"]{--sc:#007A42;--sc-fel:#008D4D;--sc-licht:#E3F2EA;--sc-zacht:#F2F9F5;}
+body[data-tab="dashboards"]{--sc:#002E56;--sc-fel:#9DBEDD;--sc-licht:#E3ECF5;--sc-zacht:#F2F6FA;}
+body[data-tab="datavelden"]{--sc:#3F6E10;--sc-fel:#8DC63F;--sc-licht:#EDF6E1;--sc-zacht:#F7FBF1;}
+
+/* Kopbalk: gekleurde streep onder de balk + kleur in de navigatie */
+.hdr{box-shadow:inset 0 -4px 0 var(--sc-fel);}
+body[data-tab="home"] .hdr{box-shadow:none;}
+.hdr-nav-btn svg{transition:color .15s;}
+#navDefinities svg{color:#8DB8E3;}
+#navProcessen svg{color:#8DC63F;}
+#navDashboards svg{color:#9DBEDD;}
+#navDatavelden svg{color:#8DC63F;}
+.hdr-nav-btn.active{box-shadow:inset 0 -3px 0 var(--sc-fel);}
+.hdr-nav-btn.active svg{color:var(--sc-fel);}
+#navHome.active svg{color:#005496;}
+
+/* Werkbalk en tabelkop in de tint van het onderdeel */
+.toolbar,.dv-toolbar,.dash-toolbar,.proc-view-flat .proc-toolbar{background:var(--sc-zacht);border-bottom-color:var(--sc-licht);}
+.search-wrap,.dv-search-wrap,.proc-view-flat .dv-search-wrap{background:#fff !important;}
+.fi-sel,.dv-fi-sel{background-color:#fff !important;}
+thead th,.dv-table thead th,.dash-table thead th{background:var(--sc-licht);color:var(--sc);border-bottom:2px solid var(--sc-fel);}
+#countLabel,#dvCountLabel,#dashCountLabel,#procCountLabel{color:var(--sc) !important;font-weight:700;}
+
+/* Geselecteerde rij en hover */
+tbody tr:hover td,.dv-table tbody tr:hover td,.dash-table tbody tr:hover{background:var(--sc-zacht);}
+tbody tr.selected td,.dv-table tbody tr.selected td,.dash-table tbody tr.selected{background:var(--sc-licht) !important;}
+tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{border-left:4px solid var(--sc-fel);}
+.term-cell,.dv-name,.dash-name{color:var(--sc);}
+
+/* Detailvak: gekleurde kop met de term */
+#view-definities .detail-header,#view-datavelden .dv-detail-header{background:var(--sc-licht);margin:-22px -24px 18px;padding:22px 24px 16px;border-bottom:3px solid var(--sc-fel);}
+@media (min-width:1600px){#view-definities .detail-header{margin:-28px -36px 20px;padding:28px 36px 18px;}}
+#view-datavelden .dv-detail-header{margin:-20px -20px 16px;padding:20px 20px 14px;}
+.detail-term,.dv-detail-name{color:var(--sc);}
+.section-label,.dv-section-label{color:var(--sc);}
+.section-label::before,.dv-section-label::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--sc-fel);margin-right:7px;vertical-align:0;}
+.detail-meta,.meta-grid{border-radius:6px;}
+.detail-empty svg{color:var(--sc-fel);opacity:.5;}
+
+/* Home: elk blok in de kleur van zijn onderdeel */
+.home-tile{position:relative;overflow:hidden;border:1px solid rgba(0,46,86,.06);}
+.home-tile{padding-left:12px;}
+.home-tile .home-tile-num{flex:0 0 76px;width:76px;height:76px;min-width:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--tile-c);color:var(--tile-t,#fff) !important;font-size:1.6rem;letter-spacing:-.02em;}
+.home-tile-title svg{color:var(--tile-c) !important;}
+.home-tile-breakdown span{background:color-mix(in srgb,var(--tile-c) 10%,#fff);color:var(--tile-c);}
+.home-tile:hover{border-color:var(--tile-c);}
+.home-about{border-top:4px solid #8DC63F;}
+
+/* Processen-overzicht: tegels krijgen het groen van Processen */
+.proc-tile{border-top:4px solid #008D4D;}
+.proc-tile:hover{border-color:#008D4D;}
+.proc-tile-team{background:#E3F2EA !important;color:#007A42 !important;}
+
+/* ===================================================================
+   Kringen (huisstijl-stijlelement): schuine lijnen van linksonder naar
+   rechtsboven, altijd binnen een cirkel.
+   =================================================================== */
+/* Kopbalk: op elk tabblad een lijncirkel rechts, in de kleur van het
+   onderdeel. Op Home blijft de grote groene cirkel zoals hij was. */
+.lijncirkel-top{display:block;}
+body:not([data-tab="home"]) .lijncirkel-top{top:-196px;right:24px;width:260px;height:260px;opacity:.9;}
+body:not([data-tab="home"]) .lijncirkel-top g{stroke:var(--sc-fel);}
+body[data-tab="processen"] .lijncirkel-top g{stroke:#8DC63F;}
+.home-tile[data-home-tile="datavelden"] .home-tile-breakdown span{color:#3F6E10;}
+.home-tile[data-home-tile="datavelden"] .home-tile-title svg{color:#5E9A1F !important;}
+
+/* Lege detailvakken: een lijnring in plaats van een grijs icoon */
+.detail-empty svg,.dv-detail-empty svg{display:none;}
+.detail-empty::before,.dv-detail-empty::before{content:"";width:150px;height:150px;border-radius:50%;
+  background:repeating-linear-gradient(135deg,var(--sc-fel) 0 3px,transparent 3px 11px);
+  -webkit-mask:radial-gradient(circle,transparent 38%,#000 38.5%);mask:radial-gradient(circle,transparent 38%,#000 38.5%);opacity:.55;}
+.detail-empty p,.dv-detail-empty p{color:var(--sc);font-weight:700;}
+.detail-empty-hint,.dv-detail-empty span{color:var(--sub) !important;}
+
+/* Home: tweede, lichte lijncirkel linksonder als tegenwicht van de
+   groene cirkel rechtsboven, en een volle saffier cirkel als kader */
+#view-home{position:relative;}
+#view-home::before{content:"";position:absolute;left:-140px;bottom:-160px;width:420px;height:420px;border-radius:50%;
+  background:repeating-linear-gradient(135deg,#9DBEDD 0 5px,transparent 5px 17px);
+  -webkit-mask:radial-gradient(circle,transparent 30%,#000 30.5%);mask:radial-gradient(circle,transparent 30%,#000 30.5%);
+  opacity:.45;pointer-events:none;z-index:0;}
+#view-home::after{content:"";position:absolute;right:-60px;bottom:-60px;width:220px;height:220px;border-radius:50%;background:#E3F2EA;pointer-events:none;z-index:0;}
+#view-home .home-content{position:relative;z-index:1;}
+.home-about{border-top:0;}
+.home-about-label::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#8DC63F;margin-right:7px;}
+@media (max-width:760px){#view-home::before,#view-home::after{display:none;}}
+
+/* ===================================================================
+   Smalle schermen (tablet/telefoon): kopbalk op twee regels, tabbladen
+   zijwaarts te scrollen, voettekst ingekort.
+   =================================================================== */
+@media (max-width:900px){
+  #view-home .proc-content{padding:0 16px 24px;}
+  .home-title{font-size:1.3rem;}
+  .home-sub{font-size:.8rem;}
+  .hdr-merged{height:auto;flex:0 0 auto;flex-wrap:wrap;gap:8px 16px;padding:10px 16px 8px;}
+  .hdr-merged .hdr-l{flex:1 1 auto;}
+  .hdr-nav{order:3;flex:1 1 100%;height:auto;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+  .hdr-nav::-webkit-scrollbar{display:none;}
+  .hdr-nav-btn{flex:0 0 auto;padding:7px 12px;}
+  .lijncirkel-top{display:none !important;}
+}
+@media (max-width:700px){
+  .home-tile{padding:14px 14px 14px 12px;gap:12px;}
+  .home-tile .home-tile-num{flex-basis:60px;width:60px;height:60px;font-size:1.25rem;}
+  .ftr span:nth-child(2){display:none;}
+  .ftr span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+}
+@media (max-width:480px){
+  .hdr-merged .t1{font-size:1rem !important;}
+  .hdr-nav-btn svg{display:none;}
+  .ftr span:first-child{display:none;}
+  .ftr{justify-content:center;}
+}

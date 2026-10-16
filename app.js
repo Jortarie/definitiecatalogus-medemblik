@@ -2109,5 +2109,84 @@ window.addEventListener('popstate', () => {
 // een refresh op /definities, of via de 404.html-doorstuurtruc).
 switchMainTab(tabFromLocation());
 
+// ── Versleepbare zijpanelen ─────────────────────────────────────────
+// Sleep de rand van een zijpaneel om het breder of smaller te maken.
+// De breedte wordt per paneel onthouden in deze browser; dubbelklik op
+// de rand zet het paneel terug naar de standaardbreedte.
+function maakVersleepbaar(panel, opties) {
+  if (!panel) return;
+  const { sleutel, zetBreedte, wis, container, min = 300, rest = 360 } = opties;
+  const greep = document.createElement('div');
+  greep.className = 'paneel-greep';
+  greep.setAttribute('role', 'separator');
+  greep.setAttribute('aria-orientation', 'vertical');
+  greep.setAttribute('aria-label', 'Sleep om het paneel breder of smaller te maken');
+  greep.tabIndex = 0;
+  greep.title = 'Sleep om breder of smaller te maken · dubbelklik om terug te zetten';
+  panel.appendChild(greep);
+
+  const ruimte = () => (container ? container() : panel.parentElement).clientWidth;
+  // Een verborgen tabblad heeft breedte 0: dan alleen de ondergrens toepassen.
+  const begrens = w => { const r = ruimte(); return Math.round(Math.max(min, r ? Math.min(w, r - rest) : w)); };
+  let breedte = null;
+  try { const v = parseInt(localStorage.getItem('paneel:' + sleutel), 10); if (v > 0) breedte = v; } catch (e) {}
+  const pas = w => { breedte = begrens(w); zetBreedte(breedte); };
+  const bewaar = () => { try { localStorage.setItem('paneel:' + sleutel, breedte); } catch (e) {} };
+  if (breedte) pas(breedte);
+
+  greep.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    greep.setPointerCapture(e.pointerId);
+    const startX = e.clientX, startW = panel.getBoundingClientRect().width;
+    document.body.classList.add('paneel-slepen');
+    greep.classList.add('actief');
+    const beweeg = ev => pas(startW + (startX - ev.clientX));
+    const los = () => {
+      greep.removeEventListener('pointermove', beweeg);
+      greep.removeEventListener('pointerup', los);
+      greep.removeEventListener('pointercancel', los);
+      document.body.classList.remove('paneel-slepen');
+      greep.classList.remove('actief');
+      bewaar();
+    };
+    greep.addEventListener('pointermove', beweeg);
+    greep.addEventListener('pointerup', los);
+    greep.addEventListener('pointercancel', los);
+  });
+  greep.addEventListener('dblclick', () => {
+    breedte = null; wis();
+    try { localStorage.removeItem('paneel:' + sleutel); } catch (e) {}
+  });
+  greep.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    pas(panel.getBoundingClientRect().width + (e.key === 'ArrowLeft' ? 40 : -40));
+    bewaar();
+  });
+  window.addEventListener('resize', () => { if (breedte) pas(breedte); });
+}
+
+function initPanelen() {
+  const defMain = document.querySelector('#view-definities .main');
+  maakVersleepbaar(document.getElementById('detailPanel'), {
+    sleutel: 'definities',
+    zetBreedte: w => { defMain.style.gridTemplateColumns = `minmax(0,1fr) ${w}px`; },
+    wis: () => { defMain.style.gridTemplateColumns = ''; }
+  });
+  const dvMain = document.querySelector('#view-datavelden .dv-main');
+  maakVersleepbaar(document.getElementById('dvDetailPanel'), {
+    sleutel: 'datavelden',
+    zetBreedte: w => { dvMain.style.gridTemplateColumns = `minmax(0,1fr) ${w}px`; },
+    wis: () => { dvMain.style.gridTemplateColumns = ''; }
+  });
+  const stap = document.getElementById('procStepPanel');
+  maakVersleepbaar(stap, {
+    sleutel: 'processtap', rest: 240,
+    zetBreedte: w => { stap.style.width = w + 'px'; },
+    wis: () => { stap.style.width = ''; }
+  });
+}
+initPanelen();
+
 initInteractions();
 loadAllData();
