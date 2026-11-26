@@ -762,8 +762,6 @@ mark.hl{background:#FFF176;color:var(--n);border-radius:2px;padding:0 1px;}
   .home-tile-title{display:flex;align-items:center;gap:7px;font-size:.92rem;font-weight:800;color:var(--n);margin-bottom:3px;}
   .home-tile-title svg{color:var(--tile-c);flex-shrink:0;}
   .home-tile-desc{font-size:.72rem;color:var(--sub);line-height:1.5;margin-bottom:7px;}
-  .home-tile-breakdown{display:flex;flex-wrap:wrap;gap:5px;font-size:.62rem;font-weight:700;}
-  .home-tile-breakdown span{background:var(--lg);color:var(--sub);border-radius:7px;padding:2px 8px;}
   .home-tile-arrow{color:var(--bd);flex-shrink:0;transition:transform .12s,color .12s;}
   .home-tile:hover .home-tile-arrow{color:var(--tile-c);transform:translateX(2px);}
 
@@ -876,7 +874,7 @@ body{font-family:'Plus Jakarta Sans',Arial,sans-serif;font-variant-numeric:tabul
 [style*="font-weight:600"],[style*="font-weight:800"]{font-weight:700 !important;}
 .term-cell,.dv-name,.dash-name,.proc-tile-naam,.dash-modal-title,.pf-nm,.home-title,.home-tile-num,.home-tile-title,
 .home-result-term,.home-result-group-label,.home-about-label,.dash-detail-title,.pf-step-panel-hdr,.mc-mini,.mc-tag-meer,
-.proc-card-title,.cat-pill,.hdr-refresh,.pf-zbtn,.mc-search-wrap input,.df-chip-link,.dv-used,.home-tile-breakdown,.proc-tile-meta{font-weight:700;}
+.proc-card-title,.cat-pill,.hdr-refresh,.pf-zbtn,.mc-search-wrap input,.df-chip-link,.dv-used,.proc-tile-meta{font-weight:700;}
 .home-sub,.detail-empty-hint{font-weight:300;}
 
 /* Kopbalk: verloop Saffier → Nacht */
@@ -1095,7 +1093,6 @@ tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{bord
 .home-tile{padding-left:12px;}
 .home-tile .home-tile-num{flex:0 0 76px;width:76px;height:76px;min-width:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--tile-c);color:var(--tile-t,#fff) !important;font-size:1.6rem;letter-spacing:-.02em;}
 .home-tile-title svg{color:var(--tile-c) !important;}
-.home-tile-breakdown span{background:color-mix(in srgb,var(--tile-c) 10%,#fff);color:var(--tile-c);}
 .home-tile:hover{border-color:var(--tile-c);}
 .home-about{border-top:4px solid #8DC63F;}
 
@@ -1114,7 +1111,6 @@ tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{bord
 body:not([data-tab="home"]) .lijncirkel-top{top:-196px;right:24px;width:260px;height:260px;opacity:.9;}
 body:not([data-tab="home"]) .lijncirkel-top g{stroke:var(--sc-fel);}
 body[data-tab="processen"] .lijncirkel-top g{stroke:#8DC63F;}
-.home-tile[data-home-tile="datavelden"] .home-tile-breakdown span{color:#3F6E10;}
 .home-tile[data-home-tile="datavelden"] .home-tile-title svg{color:#5E9A1F !important;}
 
 /* Lege detailvakken: een lijnring in plaats van een grijs icoon */
@@ -1356,9 +1352,9 @@ tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{box-
 .home-result-sub{font-size:13px !important;}
 
 /* Vier ingangen als één balk; elke rij lijnt uit over alle kolommen (subgrid) */
-.home-tiles{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;grid-template-rows:auto auto 1fr auto;gap:0 !important;
+.home-tiles{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;grid-template-rows:auto auto 1fr;gap:0 !important;
   background:var(--vlak);border-radius:4px;box-shadow:0 4px 18px rgba(0,46,86,.12);}
-.home-tile,#view-home .home-tile{display:grid !important;grid-row:span 4;grid-template-rows:subgrid;row-gap:0;align-items:start;position:relative;
+.home-tile,#view-home .home-tile{display:grid !important;grid-row:span 3;grid-template-rows:subgrid;row-gap:0;align-items:start;position:relative;
   background:none !important;border:0 !important;border-left:1px solid var(--rand-zacht) !important;border-radius:0 !important;box-shadow:none !important;
   padding:24px !important;transform:none !important;transition:background .15s ease-out !important;}
 .home-tile:first-child{border-left:0 !important;}
@@ -1370,9 +1366,6 @@ tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{box-
 .home-tile-title{font-size:18px !important;font-weight:700 !important;color:var(--nacht) !important;margin:0 0 4px !important;}
 .home-tile-title svg{display:none !important;}
 .home-tile-desc{font-size:14px !important;line-height:1.5 !important;color:var(--sub) !important;margin:0 !important;}
-.home-tile-breakdown{display:block !important;margin-top:16px !important;padding-top:12px;border-top:1px solid var(--rand-zacht);font-size:13px !important;font-weight:400 !important;color:var(--sub);}
-.home-tile-breakdown span{background:none !important;padding:0 !important;border-radius:0 !important;color:var(--sub) !important;font-weight:400 !important;white-space:nowrap;}
-.home-tile-breakdown span+span::before{content:" · ";white-space:pre;}
 .home-tile-arrow{position:absolute;top:28px;right:20px;color:var(--rand) !important;}
 .home-tile:hover .home-tile-arrow{color:var(--saffier) !important;transform:none !important;}
 .home-about{display:none !important;}
@@ -1385,7 +1378,7 @@ tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{box-
 #view-home::after{display:block !important;content:"";position:absolute;right:-90px;bottom:-110px;width:280px;height:280px;border-radius:50%;background:#E4EFE0 !important;pointer-events:none;z-index:0;}
 
 /* ---------- Kleinere schermen ---------- */
-@media (max-width:1100px){.home-tiles{grid-template-columns:repeat(2,minmax(0,1fr)) !important;grid-template-rows:auto auto 1fr auto auto auto 1fr auto;}
+@media (max-width:1100px){.home-tiles{grid-template-columns:repeat(2,minmax(0,1fr)) !important;grid-template-rows:auto auto 1fr auto auto 1fr;}
   .home-tile:nth-child(3){border-left:0 !important;}.home-tile:nth-child(n+3){border-top:1px solid var(--rand-zacht) !important;}
   .home-tile,.home-tile:first-child,.home-tile:last-child{border-radius:0 !important;}
   .main{grid-template-columns:minmax(0,1fr) 400px;}}

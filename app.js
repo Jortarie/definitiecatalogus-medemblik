@@ -1806,9 +1806,7 @@ function renderHome() {
   renderHomeSearch();
 }
 
-/* Telt en breekt per sectie uit tot een korte, feitelijke samenvatting
-   (geen decoratieve tekst — alles hieronder is een echt getal uit de
-   geladen data). Vóór het laden staan de tegels op '—'. */
+/* Vóór het laden staan de tegels op '—'. */
 function renderHomeTiles() {
   const numDef = document.getElementById('homeCountDefinities');
   const numProc = document.getElementById('homeCountProcessen');
@@ -1820,30 +1818,6 @@ function renderHomeTiles() {
   numProc.textContent = procEntries.length || '—';
   numDv.textContent = dvEntries.length || '—';
   numDash.textContent = dashEntries.length || '—';
-
-  const chip = (n, label) => `<span>${n} ${escHtml(label)}</span>`;
-
-  if (entries.length) {
-    const vastgesteld = entries.filter(e => e.status === 'Vastgesteld').length;
-    document.getElementById('homeBreakdownDefinities').innerHTML =
-      chip(vastgesteld, 'vastgesteld') + chip(entries.length - vastgesteld, 'in behandeling');
-  }
-
-  if (procEntries.length) {
-    const teams = new Set(procEntries.map(p => p.team).filter(Boolean)).size;
-    document.getElementById('homeBreakdownProcessen').innerHTML = chip(teams, teams === 1 ? 'team' : 'teams');
-  }
-
-  if (dvEntries.length) {
-    const bronnen = new Set(dvEntries.map(d => d.src).filter(Boolean)).size;
-    document.getElementById('homeBreakdownDatavelden').innerHTML = chip(bronnen, 'brontabellen');
-  }
-
-  if (dashEntries.length) {
-    const extern = dashEntries.filter(d => (d.type || '').trim().toLowerCase() === 'extern').length;
-    document.getElementById('homeBreakdownDashboards').innerHTML =
-      chip(dashEntries.length - extern, 'intern') + chip(extern, 'extern');
-  }
 }
 
 /* Catalogusbrede zoekfunctie: doorzoekt alle vier datasets tegelijk en
