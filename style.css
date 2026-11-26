@@ -1165,3 +1165,34 @@ body[data-tab="processen"] .lijncirkel-top g{stroke:#8DC63F;}
   .ftr span:first-child{display:none;}
   .ftr{justify-content:center;}
 }
+
+/* ===================================================================
+   Home: de kaart van de gemeente als beeld van de kop.
+   In rust een zachte witte lijntekening zonder namen. Onder de muis
+   kleurt het gebied op en verschijnen de kernen die in de buurt liggen.
+   =================================================================== */
+#view-home .kringen-bg{height:460px;}
+#view-home .home-hero{min-height:366px;justify-content:center;max-width:520px;}
+#view-home .home-search-wrap{position:relative;z-index:3;}
+#view-home .home-tile{background:#fff;}
+#view-home .kaart-hero{position:absolute;right:16px;top:30px;width:640px;aspect-ratio:2170/1330;--mx:-999px;--my:-999px;}
+.kaart-laag{position:absolute;inset:0;background:no-repeat center/contain;}
+.kaart-basis{background-image:url("kaart-medemblik.svg");opacity:.42;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 30%);mask-image:linear-gradient(to bottom,transparent 0,#000 30%);}
+.kaart-kleur{background-image:url("kaart-medemblik-kleur.svg");opacity:0;transition:opacity .35s ease-out;
+  -webkit-mask-image:radial-gradient(circle 130px at var(--mx) var(--my),#000 0,#000 35%,transparent 100%);
+          mask-image:radial-gradient(circle 130px at var(--mx) var(--my),#000 0,#000 35%,transparent 100%);}
+.kaart-hero.actief .kaart-kleur{opacity:1;}
+.kaart-kern{position:absolute;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;padding-left:11px;
+  transform:translateY(-50%);opacity:0;transition:opacity .25s ease-out;pointer-events:none;text-shadow:0 0 4px #002E56,0 0 8px #002E56;}
+.kaart-kern::before{content:"";position:absolute;left:0;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:#8DC63F;}
+.kaart-kern.dichtbij{opacity:1;}
+.kaart-water{padding-left:0;font-weight:300;font-style:italic;letter-spacing:.04em;font-size:13px;}
+.kaart-water::before{display:none;}
+.kaart-water.dichtbij{opacity:.8;}
+body[data-tab="home"] .lijncirkel-top{display:none;}
+#view-home::before,#view-home::after{display:none;}
+.home-about{display:none;}
+@media (max-width:1240px){#view-home .kaart-hero{right:-120px;}}
+@media (max-width:980px){#view-home .kaart-hero{display:none;}#view-home .home-hero{max-width:none;min-height:0;}#view-home .kringen-bg{height:300px;}}
+@media (prefers-reduced-motion:reduce){.kaart-kleur,.kaart-kern{transition:none;}}
