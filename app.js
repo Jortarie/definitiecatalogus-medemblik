@@ -176,11 +176,12 @@ function mapDefinitiesRows(records) {
     // wordt later (na het laden van Datavelden) opgezocht in resolveFieldChips,
     // zodat de weergave altijd de actuele Datavelden-naam toont, ook als
     // iemand die later wijzigt zonder de definitie-rij aan te passen.
-    const veldIds = VELD_KOLOMMEN
-      .map(k => (r[k] || '').trim())
-      .filter(Boolean)
-      .map(v => v.split('—')[0].split('-').slice(0, 2).join('-').trim()) // pak "DF-123" uit "DF-123 — naam" of gewoon "DF-123"
-      .filter(v => /^DF-\d+$/i.test(v));
+    // Datavelden: bij voorkeur één kolom "Datavelden" (keuzemenu met meerdere
+    // selecties, bijv. "DF-164 — pdc_dimClient.client_id, DF-163 — …").
+    // De oude losse kolommen Veld1–Veld8 werken ook nog. We halen er
+    // gewoon alle DF-nummers uit, in volgorde en zonder dubbele.
+    const veldTekst = [r.Datavelden, ...VELD_KOLOMMEN.map(k => r[k])].filter(Boolean).join(' ');
+    const veldIds = [...new Set((veldTekst.match(/\bDF-\d+\b/gi) || []).map(v => v.toUpperCase()))];
 
     rows.push({
       id, term: schoon(r.Term), def: decodeText(r.Definitie), ctx: decodeText(r.Businesscontext),
