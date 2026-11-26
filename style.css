@@ -1196,3 +1196,217 @@ body[data-tab="home"] .lijncirkel-top{display:none;}
 @media (max-width:1240px){#view-home .kaart-hero{right:-120px;}}
 @media (max-width:980px){#view-home .kaart-hero{display:none;}#view-home .home-hero{max-width:none;min-height:0;}#view-home .kringen-bg{height:300px;}}
 @media (prefers-reduced-motion:reduce){.kaart-kleur,.kaart-kern{transition:none;}}
+
+/* =====================================================================
+   HERONTWERP (nov 2026) — één ontwerpsysteem voor alle tabbladen.
+   Deze laag staat bewust onderaan en overschrijft de eerdere lagen.
+
+   Kleur   Nachtblauw (kop, tekst), Saffierblauw (alles wat klikbaar is),
+           Lentegroen alleen voor "vastgesteld", logo-groen alleen als
+           streep onder het actieve tabblad en als stip op de kaart.
+           Geen eigen kleur meer per tabblad.
+   Type    Plus Jakarta Sans. Schaal 13 / 14 / 15 / 18 / 24 / 32.
+           Geen hoofdletterlabels, niets kleiner dan 12px.
+   Vorm    Hoeken 4px. Een vlak heeft óf een rand óf een schaduw.
+   Ruimte  4 / 8 / 12 / 16 / 24 / 32 / 48.
+   ===================================================================== */
+:root{--nacht:#002E56;--saffier:#005496;--groen:#007A42;--groen-fel:#008D4D;--logogroen:#8DC63F;
+  --bg:#F4F6F8;--vlak:#fff;--rand:#DCE3EA;--rand-zacht:#E8EDF2;--sub:#4A6180;--zacht:#EAF0F6;--hover:#F6F9FC;
+  --n:#002E56;--s:#005496;--lg:#F4F6F8;--bd:#DCE3EA;}
+body,body[data-tab]{--sc:#005496;--sc-fel:#005496;--sc-licht:#EAF0F6;--sc-zacht:#F6F9FC;}
+body{background:var(--bg);color:var(--nacht);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+:focus-visible{outline:2px solid var(--saffier);outline-offset:2px;}
+
+/* ---------- Kop ---------- */
+.hdr,.hdr.hdr-merged{height:68px;flex:0 0 68px;background:var(--nacht);box-shadow:none !important;border:0;padding:0 32px;gap:32px;}
+.hdr-merged .hdr-l img{height:36px !important;}
+.hdr-merged .t1{font-size:18px !important;}
+.hdr-nav{gap:4px;height:100%;}
+.hdr-nav-btn,.hdr-nav-btn.active,#navHome.active,#navDefinities.active,#navProcessen.active,#navDatavelden.active,#navDashboards.active{
+  height:100%;border-radius:0;padding:0 14px;font-size:15px;font-weight:600;background:none !important;color:rgba(255,255,255,.75);
+  box-shadow:none;border-top:3px solid transparent;border-bottom:3px solid transparent;}
+.hdr-nav-btn svg{display:none;}
+.hdr-nav-btn:hover:not(.active){background:none !important;color:#fff;}
+.hdr-nav-btn.active,#navHome.active,#navDefinities.active,#navProcessen.active,#navDatavelden.active,#navDashboards.active{color:#fff !important;border-bottom-color:var(--logogroen);}
+.lijncirkel-top{display:none !important;}
+
+/* ---------- Voet ---------- */
+.ftr{height:auto;flex:0 0 auto;padding:8px 32px;font-size:13px;color:rgba(255,255,255,.75);}
+.ftr span,.ftr a{font-size:13px !important;color:rgba(255,255,255,.75) !important;}
+
+/* ---------- Werkbalken (alle tabbladen gelijk) ---------- */
+.toolbar,.dv-toolbar,.dash-toolbar,.proc-view-flat .proc-toolbar,.proc-toolbar{
+  height:auto !important;flex:0 0 auto !important;padding:16px 32px !important;margin:0 !important;gap:12px;
+  background:var(--vlak) !important;border-bottom:1px solid var(--rand) !important;display:flex;align-items:center;}
+.search-wrap,.dv-search-wrap,.proc-view-flat .dv-search-wrap{flex:0 1 360px;max-width:360px;background:var(--vlak) !important;border-radius:4px;}
+.search-wrap input,.dv-search-wrap input,#searchInput{height:40px;font-size:14px;border:1px solid var(--rand) !important;border-radius:4px !important;background:var(--vlak) !important;padding:0 12px 0 36px !important;color:var(--nacht);width:100%;}
+.search-wrap input:focus,.dv-search-wrap input:focus{border-color:var(--saffier) !important;}
+.search-wrap svg,.dv-search-wrap svg{left:12px;color:var(--sub);}
+.fi-sel,.dv-fi-sel,.proc-view-flat .dv-fi-sel{height:40px;font-size:14px;border:1px solid var(--rand) !important;border-radius:4px !important;padding:0 10px;background:var(--vlak) !important;color:var(--nacht);}
+.tb-sep{display:none;}
+.dv-count,.tb-count,#procCountLabel{margin-left:auto;font-size:13px !important;font-weight:400 !important;color:var(--sub) !important;}
+
+/* ---------- Tabellen (Definities, Datavelden, Dashboards) ---------- */
+table,.dv-table,.dash-table{font-size:14px;}
+thead th,.dv-table thead th,.dash-table thead th{
+  font-size:13px !important;font-weight:600 !important;text-transform:none !important;letter-spacing:0 !important;
+  color:var(--sub) !important;background:var(--bg) !important;padding:12px 16px !important;border-bottom:1px solid var(--rand) !important;}
+tbody td,.dv-table tbody td,.dash-table tbody td{padding:12px 16px !important;border-bottom:1px solid var(--rand-zacht) !important;font-size:14px;color:var(--nacht);background:var(--vlak);}
+tbody tr:hover td,.dv-table tbody tr:hover td,.dash-table tbody tr:hover td,.dash-table tbody tr:hover{background:var(--hover) !important;}
+tbody tr.selected td,.dv-table tbody tr.selected td,.dash-table tbody tr.selected td{background:var(--zacht) !important;border-left:0 !important;}
+tbody tr.selected td:first-child,.dv-table tbody tr.selected td:first-child{box-shadow:inset 3px 0 0 var(--saffier);border-left:0 !important;padding-left:16px !important;}
+.term-cell,.dv-name,.dash-name{font-size:15px !important;font-weight:700 !important;color:var(--saffier) !important;}
+.def-preview{font-size:13px !important;color:var(--sub) !important;max-width:460px !important;margin-top:2px;line-height:1.45;}
+.dv-src,.dash-team{font-size:14px;color:var(--sub);}
+.loading-row td,.empty-state{font-size:14px !important;color:var(--sub) !important;padding:24px 16px !important;}
+
+/* Categorie en type: rustige tekst, geen gekleurde pil */
+.cat-pill,.cat-wmo,.cat-jeugd,.cat-sd,.cat-toegang,.cat-instuit,.cat-other,.proc-tile-team,
+.dtype-badge,.dtype-badge.varchar,.dtype-badge.date,.dtype-badge.datetime,.dtype-badge.decimal,.dtype-badge.bigint,.dtype-badge.int,.dtype-badge.tinyint,.dtype-badge.bit,
+.dash-badge,.dash-badge.intern,.dash-badge.extern{
+  background:none !important;border:0 !important;padding:0 !important;border-radius:0 !important;
+  font-size:14px !important;font-weight:400 !important;color:var(--nacht) !important;text-transform:none !important;letter-spacing:0 !important;}
+.dtype-badge{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px !important;color:var(--sub) !important;}
+
+/* Status: stip + tekst. Vol = vastgesteld, open ring = nog te doen */
+.bdg{background:none !important;padding:0 !important;border-radius:0 !important;font-size:13px !important;font-weight:600 !important;gap:6px;white-space:normal;line-height:1.35;align-items:baseline;}
+.bdg::before{width:8px !important;height:8px !important;flex:none;transform:translateY(-1px);}
+.bdg-vastgesteld{color:var(--groen) !important;}.bdg-vastgesteld::before{background:var(--groen-fel) !important;}
+.bdg-review,.bdg-concept{color:var(--saffier) !important;}
+.bdg-review::before,.bdg-concept::before{background:transparent !important;box-shadow:inset 0 0 0 2px var(--saffier);}
+.bdg-vervallen,.bdg-leeg{color:var(--sub) !important;}.bdg-vervallen::before,.bdg-leeg::before{background:#B8C4D0 !important;}
+
+/* ---------- Detailvakken (Definities, Datavelden) ---------- */
+.main{grid-template-columns:minmax(0,1fr) 480px;}
+.detail-panel,.dv-detail-panel{background:var(--vlak);border-left:1px solid var(--rand);}
+.detail-scroll{padding:32px !important;}
+.dv-detail-content{padding:32px !important;}
+#view-definities .detail-header,#view-datavelden .dv-detail-header,.detail-header,.dv-detail-header{
+  background:none !important;margin:0 0 8px !important;padding:0 0 20px !important;border-bottom:1px solid var(--rand) !important;}
+.detail-term,.dv-detail-name{font-size:24px !important;font-weight:700;line-height:1.2;color:var(--nacht);}
+.detail-badges,.dv-detail-badges{gap:16px !important;margin-top:8px;}
+.section-label,.dv-section-label,.changelog-label,.home-about-label,.pf-step-panel-hdr span{
+  font-size:13px !important;font-weight:700 !important;text-transform:none !important;letter-spacing:0 !important;color:var(--sub) !important;margin:0 0 6px !important;}
+.section-label::before,.dv-section-label::before,.home-about-label::before{display:none !important;}
+.detail-section,.dv-section{margin:24px 0 0 !important;}
+.detail-text,.dv-section-text{font-size:15px !important;line-height:1.6 !important;color:var(--nacht) !important;max-width:62ch;}
+.detail-meta,.dv-meta,.dash-modal-meta-grid{
+  display:grid !important;grid-template-columns:1fr 1fr;gap:16px 24px !important;margin-top:28px !important;padding:20px 0 0 !important;
+  background:none !important;border:0 !important;border-top:1px solid var(--rand) !important;border-radius:0 !important;}
+.meta-key{font-size:13px !important;font-weight:400 !important;text-transform:none !important;letter-spacing:0 !important;color:var(--sub) !important;}
+.meta-val{font-size:15px !important;font-weight:600 !important;color:var(--nacht) !important;}
+.changelog-wrap{margin-top:28px;padding-top:20px;border-top:1px solid var(--rand);}
+.changelog-item{font-size:14px;}
+.changelog-list{font-size:14px;color:var(--sub);}
+.df-chip,.df-chip-link,.defref-chip,.dash-def{border-radius:4px !important;font-size:13px !important;border:1px solid var(--rand) !important;background:var(--vlak) !important;color:var(--saffier) !important;box-shadow:none !important;}
+.df-chip-link:hover,.dash-def:hover{border-color:var(--saffier) !important;}
+.detail-empty,.dv-detail-empty{gap:8px;padding:48px 32px;}
+.detail-empty::before,.dv-detail-empty::before{display:none !important;}
+.detail-empty p,.dv-detail-empty p{font-size:15px !important;font-weight:600;color:var(--nacht) !important;}
+.detail-empty-hint,.dv-detail-empty span{font-size:14px !important;color:var(--sub) !important;margin:0 !important;}
+
+/* ---------- Processen ---------- */
+.proc-tiles-scroll{padding:24px 32px !important;background:var(--bg);}
+.proc-tiles-grid{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr)) !important;gap:16px !important;}
+.proc-tile{background:var(--vlak) !important;border:1px solid var(--rand) !important;border-radius:4px !important;box-shadow:none !important;padding:20px !important;
+  display:flex !important;flex-direction:column;gap:8px;transition:border-color .15s ease-out !important;transform:none !important;}
+.proc-tile::before,.proc-tile::after{display:none !important;}
+.proc-tile:hover,.proc-tile-active{border-color:var(--saffier) !important;transform:none !important;box-shadow:none !important;}
+.proc-tile-top{display:flex;justify-content:space-between;align-items:center;margin:0 !important;}
+.proc-tile-team{font-size:13px !important;font-weight:600 !important;color:var(--groen) !important;}
+.proc-tile-naam{font-size:18px !important;font-weight:700 !important;line-height:1.3 !important;color:var(--nacht) !important;margin:0 !important;}
+.proc-tile-desc{font-size:14px !important;color:var(--sub) !important;line-height:1.5 !important;flex:1;margin:0 !important;}
+.proc-tile-meta{font-size:13px !important;font-weight:400 !important;color:var(--sub) !important;padding-top:12px !important;margin-top:auto !important;border-top:1px solid var(--rand-zacht) !important;}
+.proc-tile-arrow{color:var(--sub);}
+/* Procesplaat */
+.pf-nav{background:var(--vlak) !important;border-bottom:1px solid var(--rand) !important;padding:12px 32px !important;gap:16px;}
+.pf-back{border:1px solid var(--rand) !important;border-radius:4px !important;background:var(--vlak) !important;font-size:14px !important;font-weight:600 !important;color:var(--saffier) !important;height:36px;padding:0 12px !important;}
+.pf-back:hover{border-color:var(--saffier) !important;}
+.pf-badge{display:none !important;}
+.pf-nm{font-size:18px !important;font-weight:700 !important;color:var(--nacht) !important;}
+.pf-ds{font-size:13px !important;color:var(--sub) !important;}
+.pf-zoom-grp,.pf-fitbtn,.pf-zbtn{border-radius:4px !important;}
+.pf-legend{font-size:13px !important;color:var(--sub) !important;background:var(--vlak) !important;border-top:1px solid var(--rand) !important;padding:8px 32px !important;}
+.pf-step-panel{border-radius:4px !important;}
+
+/* ---------- Dashboards: venster ---------- */
+.dash-modal-overlay{background:rgba(0,46,86,.45) !important;backdrop-filter:none !important;}
+.dash-modal{border-radius:4px !important;box-shadow:0 12px 40px rgba(0,20,40,.28) !important;}
+.dash-modal-hdr{padding:24px 28px 16px !important;border-bottom:1px solid var(--rand) !important;}
+.dash-modal-title{font-size:24px !important;font-weight:700 !important;color:var(--nacht) !important;}
+.dash-modal-body{padding:20px 28px 28px !important;gap:20px !important;}
+.dash-modal-close{border-radius:4px !important;}
+.dash-cta{border-radius:4px !important;background:var(--saffier) !important;font-size:15px !important;}
+.dash-cta:hover{background:var(--nacht) !important;}
+.dash-row-open{border-radius:4px !important;}
+
+/* ---------- Home ---------- */
+#view-home{background:var(--bg) !important;}
+#view-home .kringen-bg{height:440px;}
+#view-home .home-content{max-width:1040px !important;padding:0 32px 64px !important;gap:0 !important;}
+#view-home .home-hero{min-height:384px;max-width:540px;gap:16px;}
+.home-title{font-size:32px !important;line-height:1.15 !important;font-weight:700 !important;}
+.home-sub{font-size:15px !important;line-height:1.6 !important;color:rgba(255,255,255,.9) !important;font-weight:400 !important;}
+.home-search-wrap{border-radius:4px !important;margin-top:8px;}
+.home-search-input-row{height:52px;padding:0 16px !important;}
+.home-search-input-row input{font-size:15px !important;}
+.home-result-group-label{font-size:13px !important;font-weight:700 !important;text-transform:none !important;letter-spacing:0 !important;padding:8px 16px !important;}
+.home-result-item{padding:10px 16px !important;}
+.home-result-term{font-size:15px !important;}
+.home-result-sub{font-size:13px !important;}
+
+/* Vier ingangen als één balk; elke rij lijnt uit over alle kolommen (subgrid) */
+.home-tiles{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;grid-template-rows:auto auto 1fr auto;gap:0 !important;
+  background:var(--vlak);border-radius:4px;box-shadow:0 4px 18px rgba(0,46,86,.12);}
+.home-tile,#view-home .home-tile{display:grid !important;grid-row:span 4;grid-template-rows:subgrid;row-gap:0;align-items:start;position:relative;
+  background:none !important;border:0 !important;border-left:1px solid var(--rand-zacht) !important;border-radius:0 !important;box-shadow:none !important;
+  padding:24px !important;transform:none !important;transition:background .15s ease-out !important;}
+.home-tile:first-child{border-left:0 !important;}
+.home-tile:first-child{border-radius:4px 0 0 4px !important;}.home-tile:last-child{border-radius:0 4px 4px 0 !important;}
+.home-tile:hover{background:var(--hover) !important;}
+.home-tile-body{display:contents;}
+.home-tile-num{min-width:0 !important;width:auto !important;height:auto !important;border-radius:0 !important;background:none !important;
+  font-size:32px !important;font-weight:700 !important;line-height:1 !important;color:var(--saffier) !important;justify-content:flex-start !important;margin:0 0 12px !important;display:block !important;}
+.home-tile-title{font-size:18px !important;font-weight:700 !important;color:var(--nacht) !important;margin:0 0 4px !important;}
+.home-tile-title svg{display:none !important;}
+.home-tile-desc{font-size:14px !important;line-height:1.5 !important;color:var(--sub) !important;margin:0 !important;}
+.home-tile-breakdown{display:block !important;margin-top:16px !important;padding-top:12px;border-top:1px solid var(--rand-zacht);font-size:13px !important;font-weight:400 !important;color:var(--sub);}
+.home-tile-breakdown span{background:none !important;padding:0 !important;border-radius:0 !important;color:var(--sub) !important;font-weight:400 !important;white-space:nowrap;}
+.home-tile-breakdown span+span::before{content:" · ";white-space:pre;}
+.home-tile-arrow{position:absolute;top:28px;right:20px;color:var(--rand) !important;}
+.home-tile:hover .home-tile-arrow{color:var(--saffier) !important;transform:none !important;}
+.home-about{display:none !important;}
+
+/* Kringen onderin Home: één lijncirkel linksonder, één volle cirkel rechtsonder */
+#view-home::before{display:block !important;content:"";position:absolute;left:-150px;bottom:-170px;width:440px;height:440px;border-radius:50%;
+  background:repeating-linear-gradient(135deg,#D3DFEA 0 7px,transparent 7px 21px) !important;
+  -webkit-mask:radial-gradient(circle,transparent 29%,#000 29.5%);mask:radial-gradient(circle,transparent 29%,#000 29.5%);
+  opacity:1 !important;pointer-events:none;z-index:0;}
+#view-home::after{display:block !important;content:"";position:absolute;right:-90px;bottom:-110px;width:280px;height:280px;border-radius:50%;background:#E4EFE0 !important;pointer-events:none;z-index:0;}
+
+/* ---------- Kleinere schermen ---------- */
+@media (max-width:1100px){.home-tiles{grid-template-columns:repeat(2,minmax(0,1fr)) !important;grid-template-rows:auto auto 1fr auto auto auto 1fr auto;}
+  .home-tile:nth-child(3){border-left:0 !important;}.home-tile:nth-child(n+3){border-top:1px solid var(--rand-zacht) !important;}
+  .home-tile,.home-tile:first-child,.home-tile:last-child{border-radius:0 !important;}
+  .main{grid-template-columns:minmax(0,1fr) 400px;}}
+@media (max-width:900px){.hdr,.hdr.hdr-merged{padding:0 16px;gap:16px;}.hdr-nav-btn{padding:0 8px;font-size:14px;}
+  .toolbar,.dv-toolbar,.dash-toolbar,.proc-toolbar{padding:12px 16px !important;flex-wrap:wrap;}
+  #view-home::before,#view-home::after{display:none !important;}}
+@media (max-width:640px){.home-tiles{grid-template-columns:1fr !important;grid-template-rows:none;}
+  .home-tile{grid-row:auto;grid-template-rows:none;border-left:0 !important;border-top:1px solid var(--rand-zacht) !important;}
+  .home-tile:first-child{border-top:0 !important;}}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;}}
+
+/* ---------- Correcties na test ---------- */
+#view-home .home-tiles .home-tile .home-tile-num{color:var(--saffier) !important;}
+tbody td[style]{font-size:14px !important;color:var(--sub) !important;}
+#view-definities thead th:nth-child(2),#view-definities thead th:nth-child(3){width:150px !important;}
+#view-definities thead th:nth-child(4){width:210px !important;}
+.dash-table thead th:nth-child(2){width:90px !important;}
+.dash-table thead th:nth-child(4){width:280px !important;}
+.dash-table thead th:nth-child(5){width:120px !important;}
+#dataIssueBanner{font-size:13px !important;padding:8px 32px !important;background:#FFF6E5 !important;color:#6B4A00 !important;border-bottom:1px solid #F1DDB0 !important;}
+#dataIssueBanner a{color:#6B4A00 !important;cursor:pointer;}
+#view-definities table{table-layout:fixed;}
+#view-definities thead th:nth-child(2),#view-definities thead th:nth-child(3){width:140px !important;}
+#view-definities thead th:first-child{width:auto !important;}
